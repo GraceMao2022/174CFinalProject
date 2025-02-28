@@ -66,7 +66,7 @@ export
                 this.stem_theta = new Array(this.stem_dof).fill(0);
                 this.apply_theta();
 
-                this.num_seeds = 50;
+                this.num_seeds = 10;
                 this.seed_length = 1.2;
                 this.seed_width = 0.05;
                 this.seeds = [];
@@ -153,8 +153,10 @@ export
             }
 
             update(dt, wind_field) {
-                // let end_effector_pos = this.get_end_effector_position();
-
+                // let stem_end_effector_pos = this.stem_end_effector.get_global_position();
+                // // console.log(stem_end_effector_pos)
+                // let wind_strength_at_stem = wind_field.get_strength_at_point(stem_end_effector_pos);
+                // let wind_force_at_stem = wind_field.direction.times(wind_strength_at_stem);
                 // let dx = hermite_pos.minus(end_effector_pos);
                 // dx = new Array(dx[0], dx[1], dx[2]);
                 // let J = this.calculate_Jacobian();
@@ -184,6 +186,60 @@ export
 
 
             }
+
+            // update(dt, wind_torque) {
+            //     this.ext_torque = vec3(0, 0, 0);
+            //     if (!this.valid)
+            //         throw "Initialization not complete."
+
+
+            //     if (wind_torque !== null)
+            //         this.ext_torque.add_by(wind_torque);
+
+            //     let spring_torque = this.calculate_viscoelastic_forces();
+            //     this.ext_torque.add_by(spring_torque);
+            //     // console.log(wind_torque);
+            //     // console.log(spring_torque)
+
+
+            //     this.symplectic_euler_update(dt);
+            // }
+
+            // symplectic_euler_update(dt) {
+            //     this.ang_vel = this.ang_vel.plus(this.ext_torque.times(dt / this.inertia));
+            //     this.joint_theta = this.joint_theta.plus(this.ang_vel.times(dt));
+
+            //     this.parent_arc.update_articulation([this.joint_theta[0], this.joint_theta[1], this.joint_theta[2]]);
+            // }
+
+            // calculate_viscoelastic_forces() {
+            //     let spring_vec = this.joint_theta;
+            //     let damper_vec = this.ang_vel;
+            //     // let spring_vec_norm = spring_vec.normalized();
+            //     // console.log(spring_vec);
+            //     let x_norm = vec3(1, 0, 0);
+            //     let y_norm = vec3(0, 1, 0);
+            //     let z_norm = vec3(0, 0, 1);
+            //     let distance = spring_vec.norm();
+            //     let offset_x = spring_vec[0];
+            //     let offset_y = spring_vec[1];
+            //     let offset_z = spring_vec[2];
+            //     let fs_x = x_norm.times(-this.ks).times(offset_x);
+            //     let fs_y = y_norm.times(-this.ks).times(offset_y);
+            //     let fs_z = z_norm.times(-this.ks).times(offset_z);
+            //     let fd_x = x_norm.times(damper_vec[0]).times(-this.kd);
+            //     let fd_y = y_norm.times(damper_vec[1]).times(-this.kd);
+            //     let fd_z = z_norm.times(damper_vec[2]).times(-this.kd);
+            //     // console.log(fd_x)
+            //     // console.log(fd_y)
+            //     // console.log(fd_z)
+            //     // console.log(this.joint_theta)
+            //     // console.log(this.ang_vel)
+            //     // console.log(fs_x)
+            //     // console.log(fs_y)
+            //     // console.log(fs_z)
+            //     return fs_x.plus(fs_y).plus(fs_z).plus(fd_x).plus(fd_y).plus(fd_z);
+            // }
 
             // mapping from global theta to each joint theta
             apply_theta() {
@@ -272,12 +328,12 @@ export
                     matrix.post_multiply(T);
                     node.shape.draw(webgl_manager, uniforms, matrix, { ...material, color: node.color });
 
-                    if (node.name === "seed") {
-                        let end_effector_transform = Mat4.scale(0.1, 0.1, 0.1);
-                        let global_pos = node.get_end_effector_global_position();
-                        end_effector_transform.pre_multiply(Mat4.translation(global_pos[0], global_pos[1], global_pos[2]));
-                        shapes.sphere.draw(webgl_manager, uniforms, end_effector_transform, { ...material, color: node.color })
-                    }
+                    // if (node.name === "seed") {
+                    //     let end_effector_transform = Mat4.scale(0.1, 0.1, 0.1);
+                    //     let global_pos = node.get_end_effector_global_position();
+                    //     end_effector_transform.pre_multiply(Mat4.translation(global_pos[0], global_pos[1], global_pos[2]));
+                    //     shapes.sphere.draw(webgl_manager, uniforms, end_effector_transform, { ...material, color: node.color })
+                    // }
 
                     matrix = this.matrix_stack.pop();
                     for (const next_arc of node.children_arcs) {
@@ -459,8 +515,8 @@ class Seed extends Node {
         this.has_moved = false;
 
 
-        this.ks = 4;
-        this.kd = 3;
+        this.ks = 20;
+        this.kd = 5;
         this.rest_theta = vec3(0, 0, 0);
     }
 
@@ -485,14 +541,6 @@ class Seed extends Node {
     symplectic_euler_update(dt) {
         this.ang_vel = this.ang_vel.plus(this.ext_torque.times(dt / this.inertia));
         this.joint_theta = this.joint_theta.plus(this.ang_vel.times(dt));
-        if (this.joint_theta[1] > Math.PI / 2)
-            this.joint_theta[1] = Math.PI / 2;
-        if (this.joint_theta[2] > Math.PI / 2)
-            this.joint_theta[2] = Math.PI / 2;
-        if (this.joint_theta[1] < -Math.PI / 2)
-            this.joint_theta[1] = -Math.PI / 2;
-        if (this.joint_theta[2] < -Math.PI / 2)
-            this.joint_theta[2] = -Math.PI / 2;
 
         this.parent_arc.update_articulation([this.joint_theta[0], this.joint_theta[1], this.joint_theta[2]]);
     }

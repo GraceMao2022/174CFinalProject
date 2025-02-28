@@ -55,10 +55,20 @@ export
         this.t_sim = 0;
         this.t_step = 0.001;
 
-        this.source_point = vec3(3, 6, 0);
-        let direction = vec3(-0.5, -0.5, 0);
-        let magnitude = 10;
-        this.wind_field = new WindField(this.source_point, direction, magnitude);
+        this.source_point_1 = vec3(3, 6, 0);
+        let direction_1 = vec3(-0.5, -0.5, 0);
+        let magnitude_1 = 50;
+        this.wind_field_1 = new WindField(this.source_point_1, direction_1, magnitude_1);
+
+        this.source_point_2 = vec3(-3, 4, 0);
+        let direction_2 = vec3(0.5, 0.5, 0);
+        let magnitude_2 = 50;
+        this.wind_field_2 = new WindField(this.source_point_2, direction_2, magnitude_2);
+
+        this.source_point_3 = vec3(1, 7, 0);
+        let direction_3 = vec3(0, -1, 0);
+        let magnitude_3 = 50;
+        this.wind_field_3 = new WindField(this.source_point_3, direction_3, magnitude_3);
       }
 
       render_animation(caller) {                                                // display():  Called once per frame of animation.  We'll isolate out
@@ -146,12 +156,27 @@ export class DandelionTest extends DandelionTest_base {
     // TODO: you should draw scene here.
     // TODO: you can change the wall and board as needed.
 
-    if (this.t_sim > 3) {
+    if (this.t_sim > 8) {
       console.log("no wind")
       this.wind_field = null
     }
-    else {
-      let wind_transform = Mat4.translation(this.source_point[0], this.source_point[1], this.source_point[2]).times(Mat4.scale(0.3, 0.3, 0.3));
+    else if (this.t_sim < 2) {
+      this.wind_field = this.wind_field_1
+      let wind_transform = Mat4.translation(this.source_point_1[0], this.source_point_1[1], this.source_point_1[2]).times(Mat4.scale(0.3, 0.3, 0.3));
+      this.shapes.ball.draw(caller, this.uniforms, wind_transform, { ...this.materials.plastic, color: yellow });
+    }
+    else if (this.t_sim < 4) {
+      console.log("no wind")
+      this.wind_field = null
+    }
+    else if (this.t_sim < 6) {
+      this.wind_field = this.wind_field_2
+      let wind_transform = Mat4.translation(this.source_point_2[0], this.source_point_2[1], this.source_point_2[2]).times(Mat4.scale(0.3, 0.3, 0.3));
+      this.shapes.ball.draw(caller, this.uniforms, wind_transform, { ...this.materials.plastic, color: yellow });
+    }
+    else if (this.t_sim <= 8) {
+      this.wind_field = this.wind_field_3
+      let wind_transform = Mat4.translation(this.source_point_3[0], this.source_point_3[1], this.source_point_3[2]).times(Mat4.scale(0.3, 0.3, 0.3));
       this.shapes.ball.draw(caller, this.uniforms, wind_transform, { ...this.materials.plastic, color: yellow });
     }
 
