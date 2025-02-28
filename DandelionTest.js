@@ -3,39 +3,27 @@ import { tiny, defs } from './examples/common.js';
 // Pull these names into this module's scope for convenience:
 const { vec3, vec4, color, Mat4, Shape, Material, Shader, Texture, Component } = tiny;
 
-// TODO: you should implement the required classes here or in another file.
+// Import required classes
 import { Dandelion } from './Dandelion.js';
-
+import { WindField } from './WindField.js';
 
 export
-  const DandelionTest_base = defs.DandelionTest_base =
+const DandelionTest_base = defs.DandelionTest_base =
     class DandelionTest_base extends Component {
-      // **My_Demo_Base** is a Scene that can be added to any display canvas.
-      // This particular scene is broken up into two pieces for easier understanding.
-      // The piece here is the base class, which sets up the machinery to draw a simple
-      // scene demonstrating a few concepts.  A subclass of it, Assignment2,
-      // exposes only the display() method, which actually places and draws the shapes,
-      // isolating that code so it can be experimented with on its own.
+
       init() {
         console.log("init")
 
-        // constructor(): Scenes begin by populating initial values like the Shapes and Materials they'll need.
         this.hover = this.swarm = false;
-        // At the beginning of our program, load one of each of these shape
-        // definitions onto the GPU.  NOTE:  Only do this ONCE per shape it
-        // would be redundant to tell it again.  You should just re-use the
-        // one called "box" more than once in display() to draw multiple cubes.
-        // Don't define more than one blueprint for the same thing here.
+
         this.shapes = {
           'box': new defs.Cube(),
           'ball': new defs.Subdivision_Sphere(4),
-          'axis': new defs.Axis_Arrows()
+          'axis': new defs.Axis_Arrows(),
+          'sphere': new defs.Subdivision_Sphere(5),
+          'cylinder': new defs.Cylindrical_Tube(20, 20, [[0, 0], [0, 0]])
         };
 
-        // *** Materials: ***  A "material" used on individual shapes specifies all fields
-        // that a Shader queries to light/color it properly.  Here we use a Phong shader.
-        // We can now tweak the scalar coefficients from the Phong lighting formulas.
-        // Expected values can be found listed in Phong_Shader::update_GPU().
         const basic = new defs.Basic_Shader();
         const phong = new defs.Phong_Shader();
         const tex_phong = new defs.Textured_Phong();
@@ -43,108 +31,214 @@ export
         this.materials.plastic = { shader: phong, ambient: .2, diffusivity: 1, specularity: .5, color: color(.9, .5, .9, 1) }
         this.materials.metal = { shader: phong, ambient: .2, diffusivity: 1, specularity: 1, color: color(.9, .5, .9, 1) }
         this.materials.rgb = { shader: tex_phong, ambient: .5, texture: new Texture("assets/rgb.jpg") }
+        this.materials.seed = { shader: phong, ambient: .3, diffusivity: 0.8, specularity: 0.2, color: color(1, 1, 1, 1) }
 
         this.ball_location = vec3(1, 1, 1);
         this.ball_radius = 0.25;
 
-        // TODO: you should create a Spline class instance
+        // Create Dandelion instance
         this.dandelion = new Dandelion(vec3(0, 0, 0));
+
+        // Create WindField instance
+        this.windField = new WindField({
+          strength: 2.0,
+          direction: vec3(1, 0.2, 0).normalized(),
+          variability: 0.4,
+          frequency: 0.3,
+          spring_constant: 15,
+          damping_constant: 1.2
+        });
+
+        // Setup interactive controls for wind
+        this.wind_strength = 2.0;
+        this.wind_direction = vec3(1, 0.2, 0).normalized();
+        this.is_blowing = false;
+        this.blow_timeout = null;
+
+        // Track time
+        this.last_time = 0;
       }
 
-      render_animation(caller) {                                                // display():  Called once per frame of animation.  We'll isolate out
-        // the code that actually draws things into Assignment2, a
-        // subclass of this Scene.  Here, the base class's display only does
-        // some initial setup.
-
-        // Setup -- This part sets up the scene's overall camera matrix, projection matrix, and lights:
+      render_animation(caller) {
         if (!caller.controls) {
           this.animated_children.push(caller.controls = new defs.Movement_Controls({ uniforms: this.uniforms }));
           caller.controls.add_mouse_controls(caller.canvas);
 
-          // Define the global camera and projection matrices, which are stored in shared_uniforms.  The camera
-          // matrix follows the usual format for transforms, but with opposite values (cameras exist as
-          // inverted matrices).  The projection matrix follows an unusual format and determines how depth is
-          // treated when projecting 3D points onto a plane.  The Mat4 functions perspective() or
-          // orthographic() automatically generate valid matrices for one.  The input arguments of
-          // perspective() are field of view, aspect ratio, and distances to the near plane and far plane.
-
-          // !!! Camera changed here
-          // TODO: you can change the camera as needed.
+          // Camera setup
           Shader.assign_camera(Mat4.look_at(vec3(5, 8, 15), vec3(0, 5, 0), vec3(0, 1, 0)), this.uniforms);
+
+          // Add click listener to blow on dandelion
+          this.add_blow_interaction(caller.canvas);
         }
         this.uniforms.projection_transform = Mat4.perspective(Math.PI / 4, caller.width / caller.height, 1, 100);
 
-        // *** Lights: *** Values of vector or point lights.  They'll be consulted by
-        // the shader when coloring shapes.  See Light's class definition for inputs.
         const t = this.t = this.uniforms.animation_time / 1000;
 
-        // const light_position = Mat4.rotation( angle,   1,0,0 ).times( vec4( 0,-1,1,0 ) ); !!!
-        // !!! Light changed here
+        // Calculate delta time for physics
+        const dt = t - this.last_time;
+        this.last_time = t;
+
+        // Update wind parameters with time-based variations
+        this.update_wind(t, dt);
+
         const light_position = vec4(20, 20, 20, 1.0);
         this.uniforms.lights = [defs.Phong_Shader.light_source(light_position, color(1, 1, 1, 1), 1000000)];
 
-        // draw axis arrows.
         this.shapes.axis.draw(caller, this.uniforms, Mat4.identity(), this.materials.rgb);
+      }
+
+      add_blow_interaction(canvas) {
+        // Add mouse/touch event listeners to blow on the dandelion
+        const blow_handler = (event) => {
+          // Calculate blow direction based on canvas coordinates
+          const rect = canvas.getBoundingClientRect();
+          const x = event.clientX - rect.left - rect.width/2;
+          const y = -(event.clientY - rect.top - rect.height/2);
+
+          // Create a blow direction from camera towards click position
+          const camera_pos = vec3(5, 8, 15);
+          const blow_target = vec3(x/20, y/20, 0);
+          const blow_direction = blow_target.minus(camera_pos).normalized();
+
+          // Apply user blow
+          this.user_blow(blow_direction, 5.0);
+        };
+
+        // Add event listeners
+        canvas.addEventListener('mousedown', blow_handler);
+        canvas.addEventListener('touchstart', (event) => {
+          event.preventDefault();
+          blow_handler(event.touches[0]);
+        });
+      }
+
+      user_blow(direction, strength) {
+        this.is_blowing = true;
+        this.wind_direction = direction;
+        this.wind_strength = strength;
+
+        // Reset any existing timeout
+        if (this.blow_timeout) {
+          clearTimeout(this.blow_timeout);
+        }
+
+        // Schedule return to normal wind
+        this.blow_timeout = setTimeout(() => {
+          this.is_blowing = false;
+        }, 1000);
+      }
+
+      update_wind(t, dt) {
+        if (dt <= 0 || dt > 0.1) dt = 0.016; // Handle first frame or pauses
+
+        // Base wind parameters
+        if (!this.is_blowing) {
+          // Normal wind state - slowly shifts direction and strength
+          this.wind_strength = 2.0 + Math.sin(t * 0.2) * 1.5;
+
+          const angle = t * 0.05;
+          this.wind_direction = vec3(
+              Math.cos(angle),
+              0.2 + Math.sin(angle * 0.3) * 0.1,
+              Math.sin(angle)
+          ).normalized();
+        }
+
+        // Update windField parameters
+        this.windField.strength = this.wind_strength;
+        this.windField.direction = this.wind_direction;
+
+        // Update the simulation
+        this.windField.update(this.dandelion, dt);
       }
     }
 
-
 export class DandelionTest extends DandelionTest_base {
-  // **Assignment2** is a Scene object that can be added to any display canvas.
-  // This particular scene is broken up into two pieces for easier understanding.
-  // See the other piece, My_Demo_Base, if you need to see the setup code.
-  // The piece here exposes only the display() method, which actually places and draws
-  // the shapes.  We isolate that code so it can be experimented with on its own.
-  // This gives you a very small code sandbox for editing a simple scene, and for
-  // experimenting with matrix transformations.
-  render_animation(caller) {                                                // display():  Called once per frame of animation.  For each shape that you want to
-    // appear onscreen, place a .draw() call for it inside.  Each time, pass in a
-    // different matrix value to control where the shape appears.
-
-    // Variables that are in scope for you to use:
-    // this.shapes.box:   A vertex array object defining a 2x2x2 cube.
-    // this.shapes.ball:  A vertex array object defining a 2x2x2 spherical surface.
-    // this.materials.metal:    Selects a shader and draws with a shiny surface.
-    // this.materials.plastic:  Selects a shader and draws a more matte surface.
-    // this.lights:  A pre-made collection of Light objects.
-    // this.hover:  A boolean variable that changes when the user presses a button.
-    // shared_uniforms:  Information the shader needs for drawing.  Pass to draw().
-    // caller:  Wraps the WebGL rendering context shown onscreen.  Pass to draw().
-
-    // Call the setup code that we left inside the base class:
+  render_animation(caller) {
     super.render_animation(caller);
 
-    /**********************************
-     Start coding down here!!!!
-     **********************************/
-    // From here on down it's just some example shapes drawn for you -- freely
-    // replace them with your own!  Notice the usage of the Mat4 functions
-    // translation(), scale(), and rotation() to generate matrices, and the
-    // function times(), which generates products of matrices.
-
-    const blue = color(0, 0, 1, 1), yellow = color(1, 0.7, 0, 1),
-      wall_color = color(0.7, 1.0, 0.8, 1),
-      blackboard_color = color(0.2, 0.2, 0.2, 1),
-      pink = color(0.9, 0.7, 0.7, 1);
+    const blue = color(0, 0, 1, 1),
+        yellow = color(1, 0.7, 0, 1),
+        wall_color = color(0.7, 1.0, 0.8, 1),
+        blackboard_color = color(0.2, 0.2, 0.2, 1),
+        pink = color(0.9, 0.7, 0.7, 1),
+        green = color(0, 0.8, 0.2, 1);
 
     const t = this.t = this.uniforms.animation_time / 1000;
 
-    // !!! Draw ground
+    // Draw ground
     let floor_transform = Mat4.translation(0, 0, 0).times(Mat4.scale(10, 0.01, 10));
     this.shapes.box.draw(caller, this.uniforms, floor_transform, { ...this.materials.plastic, color: yellow });
 
-    // TODO: you should draw scene here.
-    // TODO: you can change the wall and board as needed.
+    // Draw dandelion
     this.dandelion.draw(caller, this.uniforms, this.materials.plastic);
+
+    // Draw detached seeds
+    this.draw_detached_seeds(caller);
+
+    // Visualize wind direction (optional)
+    this.draw_wind_indicator(caller);
+  }
+
+  draw_detached_seeds(caller) {
+    // Draw all detached seeds being carried by the wind
+    for (const seed of this.windField.detached_seeds) {
+      // Draw seed stalk
+      const stalk_transform = Mat4.scale(0.05, 0.05, 0.15);
+      stalk_transform.pre_multiply(Mat4.rotation(Math.PI/2, 1, 0, 0));
+      stalk_transform.pre_multiply(Mat4.translation(seed.pos[0], seed.pos[1], seed.pos[2]));
+      this.shapes.cylinder.draw(caller, this.uniforms, stalk_transform, {
+        ...this.materials.seed,
+        color: color(0.8, 0.7, 0.6, 1)
+      });
+
+      // Draw seed fluff
+      const fluff_transform = Mat4.scale(0.1, 0.1, 0.1);
+      fluff_transform.pre_multiply(Mat4.translation(seed.pos[0], seed.pos[1] + 0.15, seed.pos[2]));
+      this.shapes.sphere.draw(caller, this.uniforms, fluff_transform, {
+        ...this.materials.seed,
+        color: color(1, 1, 1, 0.8)
+      });
+    }
+  }
+
+  draw_wind_indicator(caller) {
+    // Draw an arrow showing wind direction
+    const indicator_pos = vec3(-8, 6, -8);
+    const indicator_length = this.wind_strength * 0.5;
+
+    const arrow_transform = Mat4.scale(0.1, 0.1, indicator_length);
+    const direction = this.wind_direction;
+
+    // Calculate rotation to align with wind direction
+    const z_axis = vec3(0, 0, 1);
+    const rotation_axis = z_axis.cross(direction).normalized();
+    const angle = Math.acos(z_axis.dot(direction));
+
+    arrow_transform.pre_multiply(Mat4.rotation(angle, rotation_axis[0], rotation_axis[1], rotation_axis[2]));
+    arrow_transform.pre_multiply(Mat4.translation(indicator_pos[0], indicator_pos[1], indicator_pos[2]));
+
+    // Draw the wind arrow
+    this.shapes.cylinder.draw(caller, this.uniforms, arrow_transform, {
+      ...this.materials.plastic,
+      color: color(0.5, 0.7, 1, 0.8)
+    });
+
+    // Draw arrow head
+    const head_transform = Mat4.scale(0.2, 0.2, 0.2);
+    const tip_pos = indicator_pos.plus(direction.times(indicator_length));
+    head_transform.pre_multiply(Mat4.translation(tip_pos[0], tip_pos[1], tip_pos[2]));
+    this.shapes.sphere.draw(caller, this.uniforms, head_transform, {
+      ...this.materials.plastic,
+      color: color(0.5, 0.7, 1, 1)
+    });
   }
 
   render_controls() {
-    // render_controls(): Sets up a panel of interactive HTML elements, including
-    // buttons with key bindings for affecting this scene, and live info readouts.
-    // this.control_panel.innerHTML += "Assignment 2: IK Engine";
-    // this.new_line();
-    // // TODO: You can add your button events for debugging. (optional)
-    // this.key_triggered_button("Debug", ["Shift", "D"], null);
-    // this.new_line();
+    // Add any control UI elements here if needed
+    return [
+      ["Wind Strength", this.wind_strength],
+      ["Seeds Detached", this.windField.detached_seeds.length]
+    ];
   }
 }
