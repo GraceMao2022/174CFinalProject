@@ -8,7 +8,7 @@ export
         class WindField {
             constructor(source_point, direction, magnitude) {
                 this.source_point = source_point;
-                this.direction = direction;
+                this.direction = direction.normalized();
                 this.magnitude = magnitude; // at source point
             }
 
@@ -19,7 +19,7 @@ export
                 if (source_point_to_loc.dot(this.direction) < 0)
                     return 0;
 
-                return source_point_to_loc.norm() * 0.2;
+                return 1 / source_point_to_loc.norm() * this.magnitude;
 
             }
         }

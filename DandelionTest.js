@@ -5,6 +5,7 @@ const { vec3, vec4, color, Mat4, Shape, Material, Shader, Texture, Component } =
 
 // TODO: you should implement the required classes here or in another file.
 import { Dandelion } from './Dandelion.js';
+import { WindField } from './WindField.js';
 
 
 export
@@ -48,7 +49,16 @@ export
         this.ball_radius = 0.25;
 
         // TODO: you should create a Spline class instance
-        this.dandelion = new Dandelion(vec3(0, 0, 0));
+        this.dandelion1 = new Dandelion(vec3(0, 0, 0));
+        this.dandelion2 = new Dandelion(vec3(30, 0, 2));
+        this.dandelion3 = new Dandelion(vec3(-10, 0, 2));
+        this.t_sim = 0;
+        this.t_step = 0.001;
+
+        this.source_point = vec3(3, 6, 0);
+        let direction = vec3(-0.5, -0.5, 0);
+        let magnitude = 10;
+        this.wind_field = new WindField(this.source_point, direction, magnitude);
       }
 
       render_animation(caller) {                                                // display():  Called once per frame of animation.  We'll isolate out
@@ -135,7 +145,26 @@ export class DandelionTest extends DandelionTest_base {
 
     // TODO: you should draw scene here.
     // TODO: you can change the wall and board as needed.
-    this.dandelion.draw(caller, this.uniforms, this.materials.plastic);
+
+    if (this.t_sim > 3) {
+      console.log("no wind")
+      this.wind_field = null
+    }
+    else {
+      let wind_transform = Mat4.translation(this.source_point[0], this.source_point[1], this.source_point[2]).times(Mat4.scale(0.3, 0.3, 0.3));
+      this.shapes.ball.draw(caller, this.uniforms, wind_transform, { ...this.materials.plastic, color: yellow });
+    }
+
+    let dt = Math.min(1 / 60, this.uniforms.animation_delta_time / 1000)
+    let t_next = this.t_sim + dt;
+    for (; this.t_sim <= t_next; this.t_sim += this.t_step) {
+      this.dandelion1.update(this.t_step, this.wind_field);
+      this.dandelion2.update(this.t_step, this.wind_field);
+      this.dandelion3.update(this.t_step, this.wind_field);
+    }
+    this.dandelion1.draw(caller, this.uniforms, this.materials.plastic);
+    this.dandelion2.draw(caller, this.uniforms, this.materials.plastic);
+    this.dandelion3.draw(caller, this.uniforms, this.materials.plastic);
   }
 
   render_controls() {
