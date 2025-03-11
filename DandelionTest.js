@@ -33,8 +33,6 @@ const DandelionTest_base = defs.DandelionTest_base =
         this.materials.rgb = { shader: tex_phong, ambient: .5, texture: new Texture("assets/rgb.jpg") }
         this.materials.seed = { shader: phong, ambient: .3, diffusivity: 0.8, specularity: 0.2, color: color(1, 1, 1, 1) }
 
-        this.ball_location = vec3(1, 1, 1);
-        this.ball_radius = 0.25;
 
         // Create Dandelion instance
         this.dandelion = new Dandelion(vec3(0, 0, 0));
@@ -90,18 +88,43 @@ const DandelionTest_base = defs.DandelionTest_base =
       add_blow_interaction(canvas) {
         // Add mouse/touch event listeners to blow on the dandelion
         const blow_handler = (event) => {
-          // Calculate blow direction based on canvas coordinates
+          // Get current camera position from the controls
+          const camera_position = this.uniforms.camera_transform.times(vec4(0, 0, 0, 1)).to3();
+
+          // Calculate click position in 3D space
           const rect = canvas.getBoundingClientRect();
-          const x = event.clientX - rect.left - rect.width/2;
-          const y = -(event.clientY - rect.top - rect.height/2);
 
-          // Create a blow direction from camera towards click position
-          const camera_pos = vec3(5, 8, 15);
-          const blow_target = vec3(x/20, y/20, 0);
-          const blow_direction = blow_target.minus(camera_pos).normalized();
+          // Normalize click coordinates to [-1, 1] range
+          const normalized_x = 2 * (event.clientX - rect.left) / rect.width - 1;
+          const normalized_y = -2 * (event.clientY - rect.top) / rect.height + 1;
 
-          // Apply user blow
-          this.user_blow(blow_direction, 5.0);
+          // Get camera's view direction and orientation
+          const inv_camera = Mat4.inverse(this.uniforms.camera_transform);
+          const forward = inv_camera.times(vec4(0, 0, -1, 0)).to3().normalized();
+          const up = inv_camera.times(vec4(0, 1, 0, 0)).to3().normalized();
+          const right = forward.cross(up).normalized();
+
+          // Create a ray from camera through clicked point
+          const fov = Math.PI / 4; // From your perspective call
+          const aspect = rect.width / rect.height;
+          const tan_fov = Math.tan(fov / 2);
+
+          // Direction in camera space
+          const ray_direction = vec3(
+              normalized_x * aspect * tan_fov,
+              normalized_y * tan_fov,
+              -1 // Forward in camera space
+          ).normalized();
+
+          // Transform to world space
+          const world_ray = vec3(
+              right.dot(ray_direction),
+              up.dot(ray_direction),
+              forward.dot(ray_direction)
+          ).normalized();
+
+          // Apply user blow from camera towards clicked position
+          this.user_blow(world_ray, 5.0);
         };
 
         // Add event listeners
