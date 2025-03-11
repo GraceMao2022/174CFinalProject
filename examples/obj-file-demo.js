@@ -104,7 +104,7 @@ export class Obj_File_Demo extends Component {                           // **Ob
     // Non bump mapped:
     this.stars = {
       shader: new defs.Textured_Phong(1), color: color(.5, .5, .5, 1),
-      ambient: .3, diffusivity: .5, specularity: .5, texture: new Texture("assets/stars.png")
+      ambient: .3, diffusivity: .5, specularity: .5, texture: new Texture("assets/leaf_Smallsquare.png")
     };
     // Bump mapped:
     this.bumps = {

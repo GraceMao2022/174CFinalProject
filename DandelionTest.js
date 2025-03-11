@@ -34,7 +34,7 @@ export
           'ball': new defs.Subdivision_Sphere(4),
           'sky': new defs.Subdivision_Sphere(4),
           'axis': new defs.Axis_Arrows(),
-          "seed": new Shape_From_File("./assets/full.obj")
+          "seed": new Shape_From_File("./assets/leaf2.obj")
         };
 
         // *** Materials: ***  A "material" used on individual shapes specifies all fields
@@ -50,12 +50,12 @@ export
         this.materials.rgb = { shader: tex_phong, ambient: .5, texture: new Texture("assets/rgb.jpg") }
         this.materials.soil = {
           shader: new defs.Textured_Phong(), color: color(0, 0, 0, 1),
-          ambient: 0.5, diffusivity: .5, specularity: 0, texture: new Texture("assets/soil3.jpg")
+          ambient: 0.5, diffusivity: .5, specularity: 0, texture: new Texture("assets/soil2.jpeg")
         };
         this.shapes.ground.arrays.texture_coord.forEach(
           (v, i, l) => {
-            v[0] = v[0] * 10
-            v[1] = v[1] * 10
+            v[0] = v[0] * 15
+            v[1] = v[1] * 15
             //console.log(v)
           }
         )
@@ -97,10 +97,10 @@ export
         let magnitude_3 = 50;
         this.wind_field_3 = new WindField(this.source_point_3, direction_3, magnitude_3);
 
-        // this.leaf_texture = {
-        //   shader: new defs.Textured_Phong(1), color: color(.5, .5, .5, 1),
-        //   ambient: .3, diffusivity: .5, specularity: .5, texture: new Texture("assets/dandelion_leaf.jpg")
-        // };
+        this.leaf_texture = {
+          shader: new defs.Textured_Phong(), color: color(0, 0, 0, 1),
+          ambient: 0.5, diffusivity: .5, specularity: .5, texture: new Texture("assets/dandelion_leafTransp.png", "NPOT")
+        };
       }
 
       render_animation(caller) {                                                // display():  Called once per frame of animation.  We'll isolate out
@@ -189,8 +189,8 @@ export class DandelionTest extends DandelionTest_base {
     let sky_transform = Mat4.translation(0, 0, 0).times(Mat4.scale(50, 50, 50));
     this.shapes.sky.draw(caller, this.uniforms, sky_transform, this.materials.sky);
 
-    // let seed_transform = Mat4.translation(0, 6, 0).times(Mat4.scale(1, 1, 1));
-    // this.shapes.seed.draw(caller, this.uniforms, seed_transform, { ...this.materials.plastic, color: yellow });
+    let seed_transform = Mat4.translation(0, 1, 0).times(Mat4.scale(2, 2, 2));
+    this.shapes.seed.draw(caller, this.uniforms, seed_transform, this.leaf_texture);
 
     // TODO: you should draw scene here.
 
