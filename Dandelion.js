@@ -1,11 +1,13 @@
 import { tiny, defs } from './examples/common.js';
+import { Shape_From_File } from './examples/obj-file-demo.js';
 
 // Pull these names into this module's scope for convenience:
 const { vec3, vec4, color, Mat4, Shape, Material, Shader, Texture, Component } = tiny;
 
 const shapes = {
     'sphere': new defs.Subdivision_Sphere(5),
-    'cylinder': new defs.Cylindrical_Tube(20, 20, [[0, 0], [0, 0]])
+    'cylinder': new defs.Cylindrical_Tube(20, 20, [[0, 0], [0, 0]]),
+    // "leaf": new Shape_From_File("./assets/Dandelion.obj")
 };
 
 const colors = {
@@ -24,6 +26,11 @@ export
                 //     green = color(0, 1, 0, 1),
                 //     brown = color(0.30, 0.16, 0.16, 1),
                 //     white = color(1, 1, 1, 1);
+
+                // this.leaf_texture = {
+                //     shader: new defs.Textured_Phong(1), color: color(.5, .5, .5, 1),
+                //     ambient: .3, diffusivity: .5, specularity: .5, texture: new Texture("assets/dandelion_leaf.jpg")
+                // };
 
                 // root->stem
                 const root_location = Mat4.translation(ground_pos[0], ground_pos[1], ground_pos[2]);
@@ -312,6 +319,8 @@ export
             }
 
             draw(webgl_manager, uniforms, material) {
+                // let leaf_transform = Mat4.translation(0, 0, 0).times(Mat4.scale(10, 10, 10));
+                // shapes.leaf.draw(webgl_manager, uniforms, leaf_transform, this.leaf_texture);
                 this.matrix_stack = [];
                 this._rec_draw(this.root, Mat4.identity(), webgl_manager, uniforms, material);
             }

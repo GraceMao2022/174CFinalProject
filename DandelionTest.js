@@ -2,11 +2,12 @@ import { tiny, defs } from './examples/common.js';
 
 // Pull these names into this module's scope for convenience:
 const { vec3, vec4, color, Mat4, Shape, Material, Shader, Texture, Component } = tiny;
+const { Textured_Phong } = defs;
 
 // TODO: you should implement the required classes here or in another file.
 import { Dandelion } from './Dandelion.js';
 import { WindField } from './WindField.js';
-
+import { Shape_From_File } from './examples/obj-file-demo.js';
 
 export
   const DandelionTest_base = defs.DandelionTest_base =
@@ -29,8 +30,11 @@ export
         // Don't define more than one blueprint for the same thing here.
         this.shapes = {
           'box': new defs.Cube(),
+          'ground': new defs.Cube(),
           'ball': new defs.Subdivision_Sphere(4),
-          'axis': new defs.Axis_Arrows()
+          'sky': new defs.Subdivision_Sphere(4),
+          'axis': new defs.Axis_Arrows(),
+          "seed": new Shape_From_File("./assets/seed.obj")
         };
 
         // *** Materials: ***  A "material" used on individual shapes specifies all fields
@@ -44,6 +48,29 @@ export
         this.materials.plastic = { shader: phong, ambient: .2, diffusivity: 1, specularity: .5, color: color(.9, .5, .9, 1) }
         this.materials.metal = { shader: phong, ambient: .2, diffusivity: 1, specularity: 1, color: color(.9, .5, .9, 1) }
         this.materials.rgb = { shader: tex_phong, ambient: .5, texture: new Texture("assets/rgb.jpg") }
+        this.materials.soil = {
+          shader: new defs.Textured_Phong(), color: color(0, 0, 0, 1),
+          ambient: 0.5, diffusivity: .5, specularity: 0, texture: new Texture("assets/soil3.jpg")
+        };
+        this.shapes.ground.arrays.texture_coord.forEach(
+          (v, i, l) => {
+            v[0] = v[0] * 10
+            v[1] = v[1] * 10
+            //console.log(v)
+          }
+        )
+        this.materials.sky = {
+          shader: new defs.Textured_Phong(1), color: color(0, 0, 0, 1),
+          ambient: 1, diffusivity: .5, specularity: .2, texture: new Texture("assets/sky.jpeg")
+        };
+        this.shapes.sky.arrays.texture_coord.forEach(
+          (v, i, l) => {
+            // let temp = v[0]
+            // v[0] = v[1]
+            // v[1] = temp
+            //console.log(v)
+          }
+        )
 
         this.ball_location = vec3(1, 1, 1);
         this.ball_radius = 0.25;
@@ -65,10 +92,15 @@ export
         let magnitude_2 = 50;
         this.wind_field_2 = new WindField(this.source_point_2, direction_2, magnitude_2);
 
-        this.source_point_3 = vec3(1, 7, 0);
+        this.source_point_3 = vec3(0, 8, 0);
         let direction_3 = vec3(0, -1, 0);
         let magnitude_3 = 50;
         this.wind_field_3 = new WindField(this.source_point_3, direction_3, magnitude_3);
+
+        // this.leaf_texture = {
+        //   shader: new defs.Textured_Phong(1), color: color(.5, .5, .5, 1),
+        //   ambient: .3, diffusivity: .5, specularity: .5, texture: new Texture("assets/dandelion_leaf.jpg")
+        // };
       }
 
       render_animation(caller) {                                                // display():  Called once per frame of animation.  We'll isolate out
@@ -100,8 +132,8 @@ export
 
         // const light_position = Mat4.rotation( angle,   1,0,0 ).times( vec4( 0,-1,1,0 ) ); !!!
         // !!! Light changed here
-        const light_position = vec4(20, 20, 20, 1.0);
-        this.uniforms.lights = [defs.Phong_Shader.light_source(light_position, color(1, 1, 1, 1), 1000000)];
+        const light_position = vec4(22, 33, 0, 1.0);
+        this.uniforms.lights = [defs.Phong_Shader.light_source(light_position, color(1, 1, 1, 1), 10000000000000)];
 
         // draw axis arrows.
         this.shapes.axis.draw(caller, this.uniforms, Mat4.identity(), this.materials.rgb);
@@ -150,11 +182,17 @@ export class DandelionTest extends DandelionTest_base {
     const t = this.t = this.uniforms.animation_time / 1000;
 
     // !!! Draw ground
-    let floor_transform = Mat4.translation(0, 0, 0).times(Mat4.scale(10, 0.01, 10));
-    this.shapes.box.draw(caller, this.uniforms, floor_transform, { ...this.materials.plastic, color: yellow });
+    let floor_transform = Mat4.translation(0, 0, 0).times(Mat4.scale(50, 0.01, 50));
+    this.shapes.ground.draw(caller, this.uniforms, floor_transform, this.materials.soil);
+
+    // draw sky sphere
+    let sky_transform = Mat4.translation(0, 0, 0).times(Mat4.scale(50, 50, 50));
+    this.shapes.sky.draw(caller, this.uniforms, sky_transform, this.materials.sky);
+
+    let seed_transform = Mat4.translation(0, 6, 0).times(Mat4.scale(1, 1, 1));
+    this.shapes.seed.draw(caller, this.uniforms, seed_transform, { ...this.materials.plastic, color: yellow });
 
     // TODO: you should draw scene here.
-    // TODO: you can change the wall and board as needed.
 
     if (this.t_sim > 8) {
       console.log("no wind")
@@ -187,9 +225,9 @@ export class DandelionTest extends DandelionTest_base {
       this.dandelion2.update(this.t_step, this.wind_field);
       this.dandelion3.update(this.t_step, this.wind_field);
     }
-    this.dandelion1.draw(caller, this.uniforms, this.materials.plastic);
-    this.dandelion2.draw(caller, this.uniforms, this.materials.plastic);
-    this.dandelion3.draw(caller, this.uniforms, this.materials.plastic);
+    // this.dandelion1.draw(caller, this.uniforms, this.materials.plastic);
+    // this.dandelion2.draw(caller, this.uniforms, this.materials.plastic);
+    // this.dandelion3.draw(caller, this.uniforms, this.materials.plastic);
   }
 
   render_controls() {
