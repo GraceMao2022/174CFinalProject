@@ -52,7 +52,7 @@ export
                 let final_stem_joint = this.spawn_stem(this.num_stem_segments);
 
                 // receptacle node
-                this.receptacle_radius = 0.4;
+                this.receptacle_radius = 0.2;
                 let receptacle_transform = Mat4.scale(this.receptacle_radius, this.receptacle_radius, this.receptacle_radius);
                 receptacle_transform.pre_multiply(Mat4.translation(0, this.receptacle_radius, 0));
                 this.receptacle_node = new Node("receptacle", shapes.receptacle, receptacle_transform, colors.white);
@@ -76,7 +76,7 @@ export
                 this.stem_theta = new Array(this.stem_dof).fill(0);
                 this.apply_theta();
 
-                this.num_seeds = 10;
+                this.num_seeds = 15;
                 this.seed_length = 0.6;
                 this.seed_width = 0.6;
                 this.seeds = [];
