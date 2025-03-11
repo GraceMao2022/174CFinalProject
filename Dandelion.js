@@ -7,7 +7,10 @@ const { vec3, vec4, color, Mat4, Shape, Material, Shader, Texture, Component } =
 const shapes = {
     'sphere': new defs.Subdivision_Sphere(5),
     'cylinder': new defs.Cylindrical_Tube(20, 20, [[0, 0], [0, 0]]),
-    'seed': new Shape_From_File("./assets/single_seed.obj")
+    'seed': new Shape_From_File("./assets/single_seed.obj"),
+    'leaf': new Shape_From_File("./assets/leaf2.obj"),
+    'receptacle': new Shape_From_File("./assets/stem_pod.obj"),
+    'stem': new Shape_From_File("./assets/stem_segment.obj"),
 };
 
 const colors = {
@@ -27,10 +30,10 @@ export
                 //     brown = color(0.30, 0.16, 0.16, 1),
                 //     white = color(1, 1, 1, 1);
 
-                // this.leaf_texture = {
-                //     shader: new defs.Textured_Phong(1), color: color(.5, .5, .5, 1),
-                //     ambient: .3, diffusivity: .5, specularity: .5, texture: new Texture("assets/dandelion_leaf.jpg")
-                // };
+                this.leaf_texture = {
+                    shader: new defs.Textured_Phong(), color: color(0, 0, 0, 1),
+                    ambient: 0.5, diffusivity: .5, specularity: .5, texture: new Texture("assets/dandelion_leafTransp.png", "NPOT")
+                };
 
                 // root->stem
                 const root_location = Mat4.translation(ground_pos[0], ground_pos[1], ground_pos[2]);
@@ -49,10 +52,10 @@ export
                 let final_stem_joint = this.spawn_stem(this.num_stem_segments);
 
                 // receptacle node
-                this.receptacle_radius = 0.5;
+                this.receptacle_radius = 0.4;
                 let receptacle_transform = Mat4.scale(this.receptacle_radius, this.receptacle_radius, this.receptacle_radius);
                 receptacle_transform.pre_multiply(Mat4.translation(0, this.receptacle_radius, 0));
-                this.receptacle_node = new Node("receptacle", shapes.sphere, receptacle_transform, colors.white);
+                this.receptacle_node = new Node("receptacle", shapes.receptacle, receptacle_transform, colors.white);
                 // final_stem_joint->receptacle
                 final_stem_joint.child_node = this.receptacle_node;
                 this.receptacle_node.parent_arc = final_stem_joint;
@@ -74,8 +77,8 @@ export
                 this.apply_theta();
 
                 this.num_seeds = 10;
-                this.seed_length = 1.2;
-                this.seed_width = 1;
+                this.seed_length = 0.6;
+                this.seed_width = 0.6;
                 this.seeds = [];
                 this.seed_joints = [];
                 this.spawn_seeds(this.num_seeds);
@@ -85,10 +88,11 @@ export
                 const segment_len = this.stem_length / num_segments;
                 let parent_arc = this.root;
                 for (let i = 0; i < num_segments; i++) {
-                    const stem_transform = Mat4.scale(this.stem_width, this.stem_width, segment_len);
-                    stem_transform.pre_multiply(Mat4.rotation(Math.PI / 2, 1, 0, 0));
+                    // const stem_transform = Mat4.scale(this.stem_width, this.stem_width, segment_len);
+                    // stem_transform.pre_multiply(Mat4.rotation(Math.PI / 2, 1, 0, 0));
+                    const stem_transform = Mat4.scale(this.stem_width, segment_len, this.stem_width);
                     stem_transform.pre_multiply(Mat4.translation(0, segment_len / 2, 0));
-                    let stem_node = new Node("stem", shapes.cylinder, stem_transform, colors.green);
+                    let stem_node = new Node("stem", shapes.stem, stem_transform, colors.green);
                     this.stem_segments.push(stem_node);
 
                     parent_arc.child_node = stem_node;
@@ -114,7 +118,7 @@ export
                     let attach_point = points[i];
                     let normal = attach_point.normalized();
 
-                    let seed_transform = Mat4.scale(this.seed_width, this.seed_width, this.seed_length);
+                    let seed_transform = Mat4.scale(this.seed_width, this.seed_length, this.seed_width);
                     seed_transform.pre_multiply(Mat4.rotation(Math.PI / 2, 1, 0, 0));
                     // rotation
                     let v = vec3(0, 0, 1);
@@ -122,7 +126,7 @@ export
                     const theta = Math.acos(v.dot(normal));
                     seed_transform.pre_multiply(Mat4.rotation(theta, w[0], w[1], w[2]));
                     // translation
-                    const seed_pos = normal.times(this.seed_length) //relative to joint
+                    const seed_pos = normal.times(this.seed_length + 0.2) //relative to joint
                     seed_transform.pre_multiply(Mat4.translation(seed_pos[0], seed_pos[1], seed_pos[2]));
                     let end_effector_pos = normal.times(this.seed_length)
                     end_effector_pos = vec4(end_effector_pos[0], end_effector_pos[1], end_effector_pos[2], 1)
@@ -320,8 +324,9 @@ export
             }
 
             draw(webgl_manager, uniforms, material) {
-                // let leaf_transform = Mat4.translation(0, 0, 0).times(Mat4.scale(10, 10, 10));
-                // shapes.leaf.draw(webgl_manager, uniforms, leaf_transform, this.leaf_texture);
+                let leaf_transform = Mat4.translation(0, 1, 0).times(Mat4.scale(2, 2, 2));
+                shapes.leaf.draw(webgl_manager, uniforms, leaf_transform, this.leaf_texture);
+
                 this.matrix_stack = [];
                 this._rec_draw(this.root, Mat4.identity(), webgl_manager, uniforms, material);
             }
