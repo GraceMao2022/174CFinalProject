@@ -181,11 +181,14 @@ export
                 // this.apply_theta();
                 for (let i = 0; i < this.seeds.length; i++) {
                     let seed = this.seeds[i];
-                    if (wind_field !== null) {
+                    if (typeof wind_field !== undefined) {
                         let seed_end_effector_pos = seed.get_end_effector_global_position();
 
-                        let wind_strength = wind_field.get_strength_at_point(seed_end_effector_pos);
-                        let wind_force = wind_field.direction.times(wind_strength);
+                        // let wind_strength = wind_field.get_strength_at_point(seed_end_effector_pos);
+
+                        let wind_force = wind_field.getWindForce(seed_end_effector_pos, 1, 1);
+                        // console.log(wind_strength)
+                        // let wind_force = wind_field.direction.times(wind_strength);
                         let radius_vector = seed_end_effector_pos.minus(this.seed_joints[i].get_global_position());
 
                         // let torque = wind_force.cross(radius_vector);
