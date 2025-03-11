@@ -7,7 +7,7 @@ const { vec3, vec4, color, Mat4, Shape, Material, Shader, Texture, Component } =
 const shapes = {
     'sphere': new defs.Subdivision_Sphere(5),
     'cylinder': new defs.Cylindrical_Tube(20, 20, [[0, 0], [0, 0]]),
-    // "leaf": new Shape_From_File("./assets/Dandelion.obj")
+    'seed': new Shape_From_File("./assets/single_seed.obj")
 };
 
 const colors = {
@@ -75,7 +75,7 @@ export
 
                 this.num_seeds = 10;
                 this.seed_length = 1.2;
-                this.seed_width = 0.05;
+                this.seed_width = 1;
                 this.seeds = [];
                 this.seed_joints = [];
                 this.spawn_seeds(this.num_seeds);
@@ -115,17 +115,18 @@ export
                     let normal = attach_point.normalized();
 
                     let seed_transform = Mat4.scale(this.seed_width, this.seed_width, this.seed_length);
+                    seed_transform.pre_multiply(Mat4.rotation(Math.PI / 2, 1, 0, 0));
                     // rotation
                     let v = vec3(0, 0, 1);
                     const w = v.cross(normal).normalized();
                     const theta = Math.acos(v.dot(normal));
                     seed_transform.pre_multiply(Mat4.rotation(theta, w[0], w[1], w[2]));
                     // translation
-                    const seed_pos = normal.times(this.seed_length / 2) //relative to joint
+                    const seed_pos = normal.times(this.seed_length) //relative to joint
                     seed_transform.pre_multiply(Mat4.translation(seed_pos[0], seed_pos[1], seed_pos[2]));
                     let end_effector_pos = normal.times(this.seed_length)
                     end_effector_pos = vec4(end_effector_pos[0], end_effector_pos[1], end_effector_pos[2], 1)
-                    let seed_node = new Seed("seed", shapes.cylinder, seed_transform, colors.white, end_effector_pos);
+                    let seed_node = new Seed("seed", shapes.seed, seed_transform, colors.white, end_effector_pos);
                     this.seeds.push(seed_node);
                     // receptacle->attach_point->seed
                     const attach_joint_location = Mat4.translation(attach_point[0], attach_point[1] + this.receptacle_radius, attach_point[2]);

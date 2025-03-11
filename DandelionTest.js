@@ -34,7 +34,7 @@ export
           'ball': new defs.Subdivision_Sphere(4),
           'sky': new defs.Subdivision_Sphere(4),
           'axis': new defs.Axis_Arrows(),
-          "seed": new Shape_From_File("./assets/seed.obj")
+          "seed": new Shape_From_File("./assets/full.obj")
         };
 
         // *** Materials: ***  A "material" used on individual shapes specifies all fields
@@ -189,8 +189,8 @@ export class DandelionTest extends DandelionTest_base {
     let sky_transform = Mat4.translation(0, 0, 0).times(Mat4.scale(50, 50, 50));
     this.shapes.sky.draw(caller, this.uniforms, sky_transform, this.materials.sky);
 
-    let seed_transform = Mat4.translation(0, 6, 0).times(Mat4.scale(1, 1, 1));
-    this.shapes.seed.draw(caller, this.uniforms, seed_transform, { ...this.materials.plastic, color: yellow });
+    // let seed_transform = Mat4.translation(0, 6, 0).times(Mat4.scale(1, 1, 1));
+    // this.shapes.seed.draw(caller, this.uniforms, seed_transform, { ...this.materials.plastic, color: yellow });
 
     // TODO: you should draw scene here.
 
@@ -225,7 +225,7 @@ export class DandelionTest extends DandelionTest_base {
       this.dandelion2.update(this.t_step, this.wind_field);
       this.dandelion3.update(this.t_step, this.wind_field);
     }
-    // this.dandelion1.draw(caller, this.uniforms, this.materials.plastic);
+    this.dandelion1.draw(caller, this.uniforms, this.materials.plastic);
     // this.dandelion2.draw(caller, this.uniforms, this.materials.plastic);
     // this.dandelion3.draw(caller, this.uniforms, this.materials.plastic);
   }
