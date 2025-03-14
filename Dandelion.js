@@ -22,18 +22,14 @@ export
     const Dandelion =
         class Dandelion {
             constructor(ground_pos) {
-                // const blue = color(0, 0, 1, 1), yellow = color(1, 0.7, 0, 1),
-                //     wall_color = color(0.7, 1.0, 0.8, 1),
-                //     blackboard_color = color(0.2, 0.2, 0.2, 1),
-                //     pink = color(0.9, 0.7, 0.7, 1),
-                //     green = color(0, 1, 0, 1),
-                //     brown = color(0.30, 0.16, 0.16, 1),
-                //     white = color(1, 1, 1, 1);
 
+                // leaf
                 this.leaf_texture = {
                     shader: new defs.Textured_Phong(), color: color(0, 0, 0, 1),
                     ambient: 0.5, diffusivity: .5, specularity: .5, texture: new Texture("assets/dandelion_leafTransp.png", "NPOT")
                 };
+                const leaf_rotation = Math.random() * 2 * Math.PI;
+                this.leaf_transform = Mat4.translation(0, 1, 0).times(Mat4.rotation(leaf_rotation, 0, 1, 0)).times(Mat4.scale(2, 2, 2));
 
                 // root->stem
                 const root_location = Mat4.translation(ground_pos[0], ground_pos[1], ground_pos[2]);
@@ -327,8 +323,7 @@ export
             }
 
             draw(webgl_manager, uniforms, material) {
-                let leaf_transform = Mat4.translation(0, 1, 0).times(Mat4.scale(2, 2, 2));
-                shapes.leaf.draw(webgl_manager, uniforms, leaf_transform, this.leaf_texture);
+                shapes.leaf.draw(webgl_manager, uniforms, this.leaf_transform, this.leaf_texture);
 
                 this.matrix_stack = [];
                 this._rec_draw(this.root, Mat4.identity(), webgl_manager, uniforms, material);
