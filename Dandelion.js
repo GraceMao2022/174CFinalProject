@@ -7,7 +7,7 @@ const { vec3, vec4, color, Mat4, Shape, Material, Shader, Texture, Component } =
 const shapes = {
     'sphere': new defs.Subdivision_Sphere(5),
     'cylinder': new defs.Cylindrical_Tube(20, 20, [[0, 0], [0, 0]]),
-    'seed': new Shape_From_File("./assets/single_seed.obj"),
+    'seed': new Shape_From_File("./assets/working_seed.obj"),
     'leaf': new Shape_From_File("./assets/leaf2.obj"),
     'receptacle': new Shape_From_File("./assets/stem_pod.obj"),
     'stem': new Shape_From_File("./assets/stem_segment.obj"),
@@ -73,8 +73,9 @@ export
                 this.apply_theta();
 
                 this.num_seeds = 15;
-                this.seed_length = 0.6;
-                this.seed_width = 0.6;
+                this.seed_length = 1;
+                this.seed_display_length = 0.3;
+                this.seed_width = 0.5;
                 this.seeds = [];
                 this.seed_joints = [];
                 this.spawn_seeds(this.num_seeds);
@@ -114,7 +115,7 @@ export
                     let attach_point = points[i];
                     let normal = attach_point.normalized();
 
-                    let seed_transform = Mat4.scale(this.seed_width, this.seed_length, this.seed_width);
+                    let seed_transform = Mat4.scale(this.seed_width, this.seed_display_length, this.seed_width);
                     seed_transform.pre_multiply(Mat4.rotation(Math.PI / 2, 1, 0, 0));
                     // rotation
                     let v = vec3(0, 0, 1);
@@ -122,7 +123,7 @@ export
                     const theta = Math.acos(v.dot(normal));
                     seed_transform.pre_multiply(Mat4.rotation(theta, w[0], w[1], w[2]));
                     // translation
-                    const seed_pos = normal.times(this.seed_length + 0.2) //relative to joint
+                    const seed_pos = normal.times(this.seed_display_length + 0.2) //relative to joint
                     seed_transform.pre_multiply(Mat4.translation(seed_pos[0], seed_pos[1], seed_pos[2]));
                     let end_effector_pos = normal.times(this.seed_length)
                     end_effector_pos = vec4(end_effector_pos[0], end_effector_pos[1], end_effector_pos[2], 1)
