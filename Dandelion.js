@@ -151,11 +151,17 @@ const Dandelion =
         }
 
         update(dt, wind_field) {
-
+            let detached_seeds = [];
 
             // this.apply_theta();
             for (let i = 0; i < this.seeds.length; i++) {
                 let seed = this.seeds[i];
+
+                if (seed.detached) {
+                    detached_seeds.push(seed);
+                    continue;
+                }
+
                 if (typeof wind_field !== undefined) {
                     let seed_end_effector_pos = seed.get_end_effector_global_position();
 
@@ -170,7 +176,9 @@ const Dandelion =
                 else
                     seed.update(dt, null);
             }
-
+            if (detached_seeds.length > 0) {
+                this.seeds = this.seeds.filter(seed => !seed.detached);
+            }
 
         }
 
@@ -415,6 +423,7 @@ class Seed extends Node {
         this.valid = true;
         this.has_moved = false;
 
+        this.detachment_threshold = 0.8;
 
         this.ks = 20;
         this.kd = 5;
@@ -422,6 +431,8 @@ class Seed extends Node {
     }
 
     update(dt, wind_torque) {
+        if (this.detached) return;
+
         this.ext_torque = vec3(0, 0, 0);
         if (!this.valid)
             throw "Initialization not complete."
@@ -437,6 +448,30 @@ class Seed extends Node {
 
 
         this.symplectic_euler_update(dt);
+        this.check_detachment();
+    }
+
+    check_detachment() {
+        // Calculate the total angular displacement
+        const displacement = this.joint_theta.norm();
+
+        // If displacement exceeds threshold, detach the seed
+        if (displacement > this.detachment_threshold) {
+            this.detach();
+        }
+    }
+
+    detach() {
+        this.detached = true;
+
+        // Remove this seed from the parent's children
+        if (this.parent_arc && this.parent_arc.parent_node) {
+            const parent = this.parent_arc.parent_node;
+            const index = parent.children_arcs.indexOf(this.parent_arc);
+            if (index > -1) {
+                parent.children_arcs.splice(index, 1);
+            }
+        }
     }
 
     symplectic_euler_update(dt) {

@@ -26,7 +26,7 @@ export class DandelionTest extends Component {
     this.wind_fields = [
       new WindField(vec3(8, 12, 0), vec3(-1, -1.5, 0), 20),
       new WindField(vec3(3, 2, 5), vec3(-3, -2, -5), 50),
-      new WindField(vec3(4, 5, 1), vec3(0, -1, 0), 50),
+      new WindField(vec3(4, 5, 1), vec3(-1, -1, 0), 40),
     ];
     this.current_wind_field = this.wind_fields[0];
     this.last_time = 0;
