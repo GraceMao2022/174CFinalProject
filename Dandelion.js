@@ -45,6 +45,8 @@ export
                 this.stem_width = 0.15;
                 this.stem_segments = [];
                 this.stem_joints = []; //parent joint
+                this.stem_ks = 15;
+                this.stem_kd = 1.2;
                 let final_stem_joint = this.spawn_stem(this.num_stem_segments);
 
                 // receptacle node
@@ -63,9 +65,9 @@ export
                 // this.recept_joint.set_dof(false, false, false, false, false, false);
 
                 // add stem end-effector (at middle of receptacle)
-                const stem_end_effector_pos = vec4(0, 0, 0, 1);
-                this.stem_end_effector = new End_Effector("receptacle", final_stem_joint, stem_end_effector_pos);
-                final_stem_joint.end_effector = this.stem_end_effector;
+                // const stem_end_effector_pos = vec4(0, 0, 0, 1);
+                // this.stem_end_effector = new End_Effector("receptacle", final_stem_joint, stem_end_effector_pos);
+                // final_stem_joint.end_effector = this.stem_end_effector;
 
                 // two dofs per stem joint
                 this.stem_dof = this.num_stem_segments * 2;
@@ -76,6 +78,7 @@ export
                 this.seed_length = 1;
                 this.seed_display_length = 0.3;
                 this.seed_width = 0.5;
+                this.seed_mass = 0.1;
                 this.seeds = [];
                 this.seed_joints = [];
                 this.spawn_seeds(this.num_seeds);
@@ -89,7 +92,7 @@ export
                     // stem_transform.pre_multiply(Mat4.rotation(Math.PI / 2, 1, 0, 0));
                     const stem_transform = Mat4.scale(this.stem_width, segment_len, this.stem_width);
                     stem_transform.pre_multiply(Mat4.translation(0, segment_len / 2, 0));
-                    let stem_node = new Node("stem", shapes.stem, stem_transform, colors.green);
+                    let stem_node = new Stem("stem", shapes.stem, stem_transform, colors.green);
                     this.stem_segments.push(stem_node);
 
                     parent_arc.child_node = stem_node;
@@ -174,8 +177,8 @@ export
                 // for (let i = 0; i < this.theta.length; i++) {
                 //     this.theta[i] += delta_thetas._data[i][0];
                 // }
+                this.applyStemForces(dt, wind_field);
 
-                // this.apply_theta();
                 for (let i = 0; i < this.seeds.length; i++) {
                     let seed = this.seeds[i];
                     if (typeof wind_field !== undefined) {
@@ -188,7 +191,6 @@ export
                         // let wind_force = wind_field.direction.times(wind_strength);
                         let radius_vector = seed_end_effector_pos.minus(this.seed_joints[i].get_global_position());
 
-                        // let torque = wind_force.cross(radius_vector);
                         let torque = radius_vector.cross(wind_force);
                         seed.update(dt, torque);
                     }
@@ -197,6 +199,89 @@ export
                 }
 
 
+            }
+
+            // Apply spring-damper forces to stem segments
+            applyStemForces(dt, wind_field) {
+
+                if (!this.prev_stem_theta) {
+                    this.prev_stem_theta = [...this.stem_theta];
+                }
+
+                let receptacle_pos = this.receptacle_node.get_global_position();
+                let cumulative_displ = vec3(0, 0, 0);
+                for (let i = 0; i < this.seeds.length; i++) {
+                    let seed_pos = this.seeds[i].get_end_effector_global_position();
+                    let displ = seed_pos.minus(receptacle_pos);
+                    cumulative_displ[0] += displ[0];
+                    cumulative_displ[1] += displ[1];
+                    cumulative_displ[2] += displ[2];
+                }
+                const total_seed_mass = this.seed_mass * this.num_seeds;
+                const grav_force = cumulative_displ.times(total_seed_mass);
+                // console.log(receptacle_pos);
+                // console.log(cumulative_displ);
+                for (let i = 0; i < this.stem_segments.length; i++) {
+                    // Get segment properties
+                    const segment = this.stem_segments[i];
+                    const seg_pos = segment.get_global_position();
+                    const joint = this.stem_joints[i];
+
+                    // vector from segment position to ground attach point
+                    const seg_displ_vec = seg_pos.minus(this.root.get_global_position());
+                    // const seg_displ_len = seg_displ_vec.norm();
+
+                    const wind_torque = seg_displ_vec.cross(grav_force);
+                    segment.update(dt, wind_torque);
+
+                    // Calculate wind force on this segment
+                    // const segment_radius = this.stem_width;
+                    // const segment_mass = 0.1; // Approximate mass
+                    // const wind_force = wind_field.getWindForce(position, segment_radius, segment_mass);
+
+                    // console.log(wind_torque);
+                    // Calculate spring-damper effect
+                    // Assume rest position is straight up, so displacement is proportional to current rotation
+                    // const curr_theta_x = this.stem_theta[2 * i];
+                    // const curr_theta_z = this.stem_theta[2 * i + 1];
+
+                    // // Spring force tries to bring stem back to rest position (0 rotation)
+                    // const spring_force_x = -this.stem_ks * curr_theta_x;
+                    // const spring_force_z = -this.stem_ks * curr_theta_z;
+
+                    // // Damping force opposes motion
+                    // const angular_velocity_x = (curr_theta_x - (this.prev_stem_theta ? this.prev_stem_theta[2 * i] : 0)) / wind_field.dt;
+                    // const angular_velocity_z = (curr_theta_z - (this.prev_stem_theta ? this.prev_stem_theta[2 * i + 1] : 0)) / wind_field.dt;
+                    // const damping_force_x = -this.stem_kd * angular_velocity_x;
+                    // const damping_force_z = -this.stem_kd * angular_velocity_z;
+
+                    // // Calculate net angular acceleration
+                    // const torque_x = wind_force[0] * 0.2 + spring_force_x + damping_force_x;
+                    // const torque_z = wind_force[2] * 0.2 + spring_force_z + damping_force_z;
+
+                    // // Update angles using Verlet integration
+                    // const angular_accel_x = torque_x / segment_mass;
+                    // const angular_accel_z = torque_z / segment_mass;
+
+                    // // Save current theta for damping calculation next frame
+                    // if (!this.prev_stem_theta) {
+                    //     this.prev_stem_theta = [...this.stem_theta];
+                    // }
+
+                    // // Update thetas with Verlet integration
+                    // const new_theta_x = 2 * curr_theta_x - (this.prev_stem_theta[2 * i]) + angular_accel_x * wind_field.dt * wind_field.dt;
+                    // const new_theta_z = 2 * curr_theta_z - (this.prev_stem_theta[2 * i + 1]) + angular_accel_z * wind_field.dt * wind_field.dt;
+
+                    // // Apply constraints to prevent excessive bending
+                    // const max_bend = 0.3;
+                    // this.prev_stem_theta[2 * i] = curr_theta_x;
+                    // this.prev_stem_theta[2 * i + 1] = curr_theta_z;
+                    // this.stem_theta[2 * i] = Math.max(Math.min(new_theta_x, max_bend), -max_bend);
+                    // this.stem_theta[2 * i + 1] = Math.max(Math.min(new_theta_z, max_bend), -max_bend);
+                    // console.log(this.stem_theta[2 * i]);
+
+                }
+                // this.apply_theta();
             }
 
             // update(dt, wind_torque) {
@@ -342,13 +427,6 @@ export
                     matrix.post_multiply(T);
                     node.shape.draw(webgl_manager, uniforms, matrix, { ...material, color: node.color });
 
-                    // if (node.name === "seed") {
-                    //     let end_effector_transform = Mat4.scale(0.1, 0.1, 0.1);
-                    //     let global_pos = node.get_end_effector_global_position();
-                    //     end_effector_transform.pre_multiply(Mat4.translation(global_pos[0], global_pos[1], global_pos[2]));
-                    //     shapes.sphere.draw(webgl_manager, uniforms, end_effector_transform, { ...material, color: node.color })
-                    // }
-
                     matrix = this.matrix_stack.pop();
                     for (const next_arc of node.children_arcs) {
                         this.matrix_stack.push(matrix.copy());
@@ -356,42 +434,6 @@ export
                         matrix = this.matrix_stack.pop();
                     }
                 }
-            }
-
-            debug(arc = null, id = null) {
-
-                // this.theta = this.theta.map(x => x + 0.01);
-                // this.apply_theta();
-                const J = this.calculate_Jacobian();
-                let dx = [[0], [-0.02], [0]];
-                if (id === 2)
-                    dx = [[-0.02], [0], [0]];
-                const dtheta = this.calculate_delta_theta(J, dx);
-
-                // const direction = new Array(this.dof);
-                // let norm = 0;
-                // for (let i = 0; i < direction.length; i++) {
-                //     direction[i] = dtheta[i][0];
-                //     norm += direction[i] ** 2.0;
-                // }
-                // norm = norm ** 0.5;
-                // console.log(direction);
-                // console.log(norm);
-                // this.theta = this.theta.map((v, i) => v + 0.01 * (direction[i] / norm));
-                this.theta = this.theta.map((v, i) => v + dtheta[i][0]);
-                this.apply_theta();
-
-                // if (arc === null)
-                //     arc = this.root;
-                //
-                // if (arc !== this.root) {
-                //     arc.articulation_matrix = arc.articulation_matrix.times(Mat4.rotation(0.02, 0, 0, 1));
-                // }
-                //
-                // const node = arc.child_node;
-                // for (const next_arc of node.children_arcs) {
-                //     this.debug(next_arc);
-                // }
             }
         }
 
@@ -516,38 +558,33 @@ class Seed extends Node {
         super(name, shape, transform, color);
         this.detached = false;
 
-
         this.inertia = 2;
         // thetas for joint attached to receptacle
         this.joint_theta = vec3(0, 0, 0);
         this.end_effector_local_pos = end_effector_pos;
-        this.prev_pos = vec3(0, 0, 0);
+        // this.prev_pos = vec3(0, 0, 0);
         this.ang_vel = vec3(0, 0, 0);
-        this.ang_acc = vec3(0, 0, 0);
+        // this.ang_acc = vec3(0, 0, 0);
         this.ext_torque = vec3(0, 0, 0);
-        this.valid = true;
-        this.has_moved = false;
+        // this.valid = true;
+        // this.has_moved = false;
 
 
         this.ks = 20;
         this.kd = 5;
-        this.rest_theta = vec3(0, 0, 0);
+        // this.rest_theta = vec3(0, 0, 0);
     }
 
     update(dt, wind_torque) {
         this.ext_torque = vec3(0, 0, 0);
-        if (!this.valid)
-            throw "Initialization not complete."
-
+        // if (!this.valid)
+        //     throw "Initialization not complete."
 
         if (wind_torque !== null)
             this.ext_torque.add_by(wind_torque);
 
         let spring_torque = this.calculate_viscoelastic_forces();
         this.ext_torque.add_by(spring_torque);
-        // console.log(wind_torque);
-        // console.log(spring_torque)
-
 
         this.symplectic_euler_update(dt);
     }
@@ -567,7 +604,7 @@ class Seed extends Node {
         let x_norm = vec3(1, 0, 0);
         let y_norm = vec3(0, 1, 0);
         let z_norm = vec3(0, 0, 1);
-        let distance = spring_vec.norm();
+
         let offset_x = spring_vec[0];
         let offset_y = spring_vec[1];
         let offset_z = spring_vec[2];
@@ -577,14 +614,6 @@ class Seed extends Node {
         let fd_x = x_norm.times(damper_vec[0]).times(-this.kd);
         let fd_y = y_norm.times(damper_vec[1]).times(-this.kd);
         let fd_z = z_norm.times(damper_vec[2]).times(-this.kd);
-        // console.log(fd_x)
-        // console.log(fd_y)
-        // console.log(fd_z)
-        // console.log(this.joint_theta)
-        // console.log(this.ang_vel)
-        // console.log(fs_x)
-        // console.log(fs_y)
-        // console.log(fs_z)
         return fs_x.plus(fs_y).plus(fs_z).plus(fd_x).plus(fd_y).plus(fd_z);
     }
 
@@ -592,5 +621,62 @@ class Seed extends Node {
     get_end_effector_global_position() {
         let pos = this.parent_arc.get_global_transform().times(this.end_effector_local_pos);
         return vec3(pos[0], pos[1], pos[2]);
+    }
+}
+
+class Stem extends Node {
+    constructor(name, shape, transform, color) {
+        super(name, shape, transform, color);
+
+        this.inertia = 2;
+        this.joint_theta = vec3(0, 0, 0);
+        this.ang_vel = vec3(0, 0, 0);
+        this.ext_torque = vec3(0, 0, 0);
+
+        this.ks = 20;
+        this.kd = 5;
+
+    }
+
+    update(dt, wind_torque) {
+        this.ext_torque = vec3(0, 0, 0);
+        // if (!this.valid)
+        //     throw "Initialization not complete."
+
+        if (wind_torque !== null)
+            this.ext_torque.add_by(wind_torque);
+
+        let spring_torque = this.calculate_viscoelastic_forces();
+        this.ext_torque.add_by(spring_torque);
+
+        this.symplectic_euler_update(dt);
+    }
+
+    symplectic_euler_update(dt) {
+        this.ang_vel = this.ang_vel.plus(this.ext_torque.times(dt / this.inertia));
+        this.joint_theta = this.joint_theta.plus(this.ang_vel.times(dt));
+
+        this.parent_arc.update_articulation([this.joint_theta[0], this.joint_theta[2]]);
+    }
+
+    calculate_viscoelastic_forces() {
+        let spring_vec = this.joint_theta;
+        let damper_vec = this.ang_vel;
+        // let spring_vec_norm = spring_vec.normalized();
+        // console.log(spring_vec);
+        let x_norm = vec3(1, 0, 0);
+        // let y_norm = vec3(0, 1, 0);
+        let z_norm = vec3(0, 0, 1);
+
+        let offset_x = spring_vec[0];
+        // let offset_y = spring_vec[1];
+        let offset_z = spring_vec[2];
+        let fs_x = x_norm.times(-this.ks).times(offset_x);
+        // let fs_y = y_norm.times(-this.ks).times(offset_y);
+        let fs_z = z_norm.times(-this.ks).times(offset_z);
+        let fd_x = x_norm.times(damper_vec[0]).times(-this.kd);
+        // let fd_y = y_norm.times(damper_vec[1]).times(-this.kd);
+        let fd_z = z_norm.times(damper_vec[2]).times(-this.kd);
+        return fs_x.plus(fs_z).plus(fd_x).plus(fd_z);
     }
 }

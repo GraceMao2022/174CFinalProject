@@ -48,8 +48,16 @@ export
         )
         this.materials.sky = {
           shader: new defs.Textured_Phong(1), color: color(0, 0, 0, 1),
-          ambient: 1, diffusivity: .5, specularity: .2, texture: new Texture("assets/sky.jpeg")
+          ambient: 1, diffusivity: .5, specularity: .2, texture: new Texture("assets/sky.jpeg", "NPOT")
         };
+        // this.shapes.sky.arrays.texture_coord.forEach(
+        //   (v, i, l) => {
+        //     let temp = v[0]
+        //     v[0] = v[1] / 2
+        //     v[1] = temp
+        //     //console.log(v)
+        //   }
+        // )
         this.materials.seed = { shader: phong, ambient: .3, diffusivity: 0.8, specularity: 0.2, color: color(1, 1, 1, 1) }
 
         this.ball_location = vec3(1, 1, 1);
@@ -179,11 +187,14 @@ export
           this.wind_strength = 2.0 + Math.sin(t * 0.2) * 1.5;
 
           const angle = t * 0.05;
+          // this.wind_direction = vec3(
+          //   Math.cos(angle),
+          //   0.2 + Math.sin(angle * 0.3) * 0.1,
+          //   Math.sin(angle)
+          // ).normalized();
           this.wind_direction = vec3(
-            Math.cos(angle),
-            0.2 + Math.sin(angle * 0.3) * 0.1,
-            Math.sin(angle)
-          ).normalized();
+            0, 0, 0
+          );
         }
 
         // Update windField parameters
