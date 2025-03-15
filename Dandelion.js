@@ -67,12 +67,11 @@ export
             }
 
             update(dt, active_wind_fields) {
-                console.log(active_wind_fields.length)
                 if (active_wind_fields.length === 0)
                     this.applySeedForces(dt, null)
                 for (let i = 0; i < active_wind_fields.length; i++)
                     this.applySeedForces(dt, active_wind_fields[i]);
-                // this.applyStemForces(dt);
+                this.applyStemForces(dt);
             }
 
             applySeedForces(dt, wind_field) {
@@ -81,7 +80,6 @@ export
                 for (let i = 0; i < this.seeds.length; i++) {
                     let seed = this.seeds[i];
                     seed.detach_enabled = this.detach_enabled;
-                    console.log(wind_field)
 
                     if (seed.detached) {
                         detached_seeds.push(seed);
@@ -128,8 +126,14 @@ export
                     // vector from segment position to ground attach point
                     const seg_displ_vec = seg_pos.minus(this.root.get_global_position());
 
-                    const wind_torque = seg_displ_vec.cross(grav_force);
-                    segment.update(dt, wind_torque);
+                    // if there are still seeds left
+                    if (total_seed_mass > 0) {
+                        const wind_torque = seg_displ_vec.cross(grav_force);
+                        segment.update(dt, wind_torque);
+                    }
+                    else {
+                        segment.update(dt, null);
+                    }
                 }
             }
 
