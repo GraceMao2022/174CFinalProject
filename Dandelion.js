@@ -21,7 +21,9 @@ const colors = {
 export
     const Dandelion =
         class Dandelion {
-            constructor(ground_pos) {
+            constructor(ground_pos, detach_enabled = true) {
+                this.detach_enabled = detach_enabled;
+
                 // leaf
                 this.leaf_texture = {
                     shader: new defs.Textured_Phong(), color: color(0, 0, 0, 1),
@@ -58,15 +60,19 @@ export
                 this.seed_length = 1;
                 this.seed_display_length = 0.3; //need to tweak some things -- Grace
                 this.seed_width = 0.5;
-                this.seed_mass = 0.1;
+                this.seed_mass = 0.005;
                 this.seeds = [];
                 this.seed_joints = [];
                 this.spawn_seeds(this.init_num_seeds);
             }
 
-            update(dt, wind_field) {
-                this.applySeedForces(dt, wind_field);
-                this.applyStemForces(dt);
+            update(dt, active_wind_fields) {
+                console.log(active_wind_fields.length)
+                if (active_wind_fields.length === 0)
+                    this.applySeedForces(dt, null)
+                for (let i = 0; i < active_wind_fields.length; i++)
+                    this.applySeedForces(dt, active_wind_fields[i]);
+                // this.applyStemForces(dt);
             }
 
             applySeedForces(dt, wind_field) {
@@ -74,13 +80,15 @@ export
 
                 for (let i = 0; i < this.seeds.length; i++) {
                     let seed = this.seeds[i];
+                    seed.detach_enabled = this.detach_enabled;
+                    console.log(wind_field)
 
                     if (seed.detached) {
                         detached_seeds.push(seed);
                         continue;
                     }
 
-                    if (typeof wind_field !== undefined) {
+                    if (wind_field !== null) {
                         let seed_end_effector_pos = seed.get_end_effector_global_position();
 
                         let wind_force = wind_field.getWindForce(seed_end_effector_pos, 1);
@@ -110,7 +118,7 @@ export
                     cumulative_displ[2] += displ[2];
                 }
                 const total_seed_mass = this.seed_mass * this.seeds.length;
-                const grav_force = cumulative_displ.times(total_seed_mass);
+                const grav_force = cumulative_displ.normalized().times(total_seed_mass * 9.8);
 
                 for (let i = 0; i < this.stem_segments.length; i++) {
                     // Get segment properties
@@ -194,7 +202,7 @@ export
                     seed_transform.pre_multiply(Mat4.translation(seed_pos[0], seed_pos[1], seed_pos[2]));
                     let end_effector_pos = normal.times(this.seed_length)
                     end_effector_pos = vec4(end_effector_pos[0], end_effector_pos[1], end_effector_pos[2], 1)
-                    let seed_node = new Seed("seed", shapes.seed, seed_transform, colors.white, end_effector_pos);
+                    let seed_node = new Seed("seed", shapes.seed, seed_transform, colors.white, end_effector_pos, this.detach_enabled);
                     this.seeds.push(seed_node);
                     // receptacle->attach_point->seed
                     const attach_joint_location = Mat4.translation(attach_point[0], attach_point[1] + this.receptacle_radius, attach_point[2]);
@@ -335,7 +343,7 @@ class Arc {
 }
 
 class Seed extends Node {
-    constructor(name, shape, transform, color, end_effector_pos) {
+    constructor(name, shape, transform, color, end_effector_pos, detach_enabled) {
         super(name, shape, transform, color);
 
         this.inertia = 2;
@@ -345,6 +353,7 @@ class Seed extends Node {
         this.ang_vel = vec3(0, 0, 0);
         this.ext_torque = vec3(0, 0, 0);
 
+        this.detach_enabled = detach_enabled;
         this.detached = false;
         this.detachment_threshold = 0.8;
 
@@ -364,7 +373,9 @@ class Seed extends Node {
         this.ext_torque.add_by(spring_torque);
 
         this.symplectic_euler_update(dt);
-        this.check_detachment();
+
+        if (this.detach_enabled)
+            this.check_detachment();
     }
 
     check_detachment() {

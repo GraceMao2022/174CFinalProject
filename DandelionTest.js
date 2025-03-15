@@ -41,13 +41,12 @@ export class DandelionTest extends Component {
     this.t_sim = 0;
     this.t_step = 0.001;
 
-    // this.active_wind_fields = [];
+    this.active_wind_fields = [];
+    this.user_wind_field = null;
     this.current_wind_field = this.wind_fields[0];
 
     // Setup interactive controls for wind
-    this.wind_strength = 2.0;
-    this.wind_direction = vec3(1, 0.2, 0).normalized();
-    this.is_blowing = false;
+    // this.is_blowing = false;
     this.blow_timeout = null;
   }
 
@@ -80,29 +79,27 @@ export class DandelionTest extends Component {
     let sky_transform = Mat4.translation(0, 0, 0).times(Mat4.scale(50, 50, 50));
     this.shapes.sky.draw(caller, this.uniforms, sky_transform, this.materials.sky);
 
-    this.current_wind_field.update(dt);
+    // add user wind to active wind
+    if (this.user_wind_field !== null)
+      this.active_wind_fields.push(this.user_wind_field);
 
     let t_next = this.t_sim + dt;
     for (; this.t_sim <= t_next; this.t_sim += this.t_step) {
-      this.dandelion1.update(this.t_step, this.current_wind_field);
-      // this.dandelion2.update(this.t_step, this.wind_field);
-      // this.dandelion3.update(this.t_step, this.wind_field);
-    }
-    this.dandelion1.draw(caller, this.uniforms, this.materials.plastic);
-    // this.dandelion2.draw(caller, this.uniforms, this.materials.plastic);
-    // this.dandelion3.draw(caller, this.uniforms, this.materials.plastic);
+      // update all active wind fields
+      for (let i = 0; i < this.active_wind_fields.length; i++)
+        this.active_wind_fields[i].update(dt);
 
-    // Draw dandelion
-    //this.dandelion.draw(caller, this.uniforms, this.materials.plastic);
+      this.dandelion1.update(this.t_step, this.active_wind_fields);
+    }
 
     // Visualize wind direction (optional)
     this.draw_wind_indicator(caller);
 
-    // Update wind parameters with time-based variations
-    // this.update_wind(t, dt);
+    // pop user wind off of active wind stack
+    if (this.user_wind_field !== null)
+      this.active_wind_fields.pop();
 
-    // draw axis arrows.
-    // this.shapes.axis.draw(caller, this.uniforms, Mat4.identity(), this.materials.rgb);
+    this.dandelion1.draw(caller, this.uniforms, this.materials.plastic);
 
     const colors = [color(1, 0.7, 0, 1), color(0.7, 1, 1, 1), color(0, 1, 0, 1)];
     for (let i = 0; i < this.wind_fields.length; i++) {
@@ -125,7 +122,7 @@ export class DandelionTest extends Component {
       const blow_direction = blow_target.minus(camera_pos).normalized();
 
       // Apply user blow
-      this.user_blow(blow_direction, 5.0);
+      this.user_blow(blow_direction, 500.0);
     };
 
     // Add event listeners
@@ -137,9 +134,10 @@ export class DandelionTest extends Component {
   }
 
   user_blow(direction, strength) {
-    this.is_blowing = true;
-    this.wind_direction = direction;
-    this.wind_strength = strength;
+    // this.is_blowing = true;
+
+    // TODO: change source_point to match actual camera pos
+    this.user_wind_field = new WindField(vec3(5, 8, 15), direction, strength);
 
     // Reset any existing timeout
     if (this.blow_timeout) {
@@ -148,200 +146,57 @@ export class DandelionTest extends Component {
 
     // Schedule return to normal wind
     this.blow_timeout = setTimeout(() => {
-      this.is_blowing = false;
+      // this.is_blowing = false;
+      this.user_wind_field = null;
     }, 1000);
   }
 
-  // update_wind(t, dt) {
-  //   if (dt <= 0 || dt > 0.1) dt = 0.016; // Handle first frame or pauses
-
-  //   // Base wind parameters
-  //   if (!this.is_blowing) {
-  //     // Normal wind state - slowly shifts direction and strength
-  //     this.wind_strength = 2.0 + Math.sin(t * 0.2) * 1.5;
-
-  //     const angle = t * 0.05;
-  //     // this.wind_direction = vec3(
-  //     //   Math.cos(angle),
-  //     //   0.2 + Math.sin(angle * 0.3) * 0.1,
-  //     //   Math.sin(angle)
-  //     // ).normalized();
-  //     this.wind_direction = vec3(
-  //       0, 0, 0
-  //     );
-  //   }
-
-  //   // Update windField parameters
-  //   this.windField.strength = this.wind_strength;
-  //   this.windField.direction = this.wind_direction;
-
-  //   // Update the simulation
-  //   this.windField.update(dt);
-  // }
-
   draw_wind_indicator(caller) {
-    // Draw an arrow showing wind direction
-    const indicator_pos = vec3(-8, 6, -8);
-    const indicator_length = this.wind_strength * 0.5;
+    if (this.active_wind_fields.length > 0) {
+      // Draw an arrow showing wind direction
+      let accum_force = vec3(0, 0, 0);
+      for (let i = 0; i < this.active_wind_fields.length; i++) {
+        accum_force.add_by(this.active_wind_fields[i].direction.times(this.active_wind_fields[i].magnitude));
+      }
+      let direction = accum_force.normalized();
+      // console.log(direction)
+      // console.log(accum_force.norm())
 
-    const arrow_transform = Mat4.scale(0.1, 0.1, indicator_length);
-    const direction = this.wind_direction;
+      const indicator_pos = vec3(-8, 6, -8);
+      const indicator_length = accum_force.norm() * 0.1;
 
-    // Calculate rotation to align with wind direction
-    const z_axis = vec3(0, 0, 1);
-    const rotation_axis = z_axis.cross(direction).normalized();
-    const angle = Math.acos(z_axis.dot(direction));
+      const arrow_transform = Mat4.scale(0.1, 0.1, indicator_length);
 
-    arrow_transform.pre_multiply(Mat4.rotation(angle, rotation_axis[0], rotation_axis[1], rotation_axis[2]));
-    arrow_transform.pre_multiply(Mat4.translation(indicator_pos[0], indicator_pos[1], indicator_pos[2]));
+      // Calculate rotation to align with wind direction
+      const z_axis = vec3(0, 0, 1);
+      const rotation_axis = z_axis.cross(direction).normalized();
+      const angle = Math.acos(z_axis.dot(direction));
 
-    // Draw the wind arrow
-    this.shapes.cylinder.draw(caller, this.uniforms, arrow_transform, {
-      ...this.materials.plastic,
-      color: color(0.5, 0.7, 1, 0.8)
-    });
+      arrow_transform.pre_multiply(Mat4.rotation(angle, rotation_axis[0], rotation_axis[1], rotation_axis[2]));
+      arrow_transform.pre_multiply(Mat4.translation(indicator_pos[0], indicator_pos[1], indicator_pos[2]));
 
-    // Draw arrow head
-    const head_transform = Mat4.scale(0.2, 0.2, 0.2);
-    const tip_pos = indicator_pos.plus(direction.times(indicator_length));
-    head_transform.pre_multiply(Mat4.translation(tip_pos[0], tip_pos[1], tip_pos[2]));
-    this.shapes.sphere.draw(caller, this.uniforms, head_transform, {
-      ...this.materials.plastic,
-      color: color(0.5, 0.7, 1, 1)
-    });
+      // Draw the wind arrow
+      this.shapes.cylinder.draw(caller, this.uniforms, arrow_transform, {
+        ...this.materials.plastic,
+        color: color(0.5, 0.7, 1, 0.8)
+      });
+
+      // Draw arrow head
+      const head_transform = Mat4.scale(0.2, 0.2, 0.2);
+      const tip_pos = indicator_pos.plus(direction.times(indicator_length));
+      head_transform.pre_multiply(Mat4.translation(tip_pos[0], tip_pos[1], tip_pos[2]));
+      this.shapes.sphere.draw(caller, this.uniforms, head_transform, {
+        ...this.materials.plastic,
+        color: color(0.5, 0.7, 1, 1)
+      });
+    }
   }
 
   render_controls() {
-    this.key_triggered_button("Wind Field 1", ["1"], () => { this.current_wind_field = this.wind_fields[0]; });
-    this.key_triggered_button("Wind Field 2", ["2"], () => { this.current_wind_field = this.wind_fields[1]; });
-    this.key_triggered_button("Wind Field 3", ["3"], () => { this.current_wind_field = this.wind_fields[2]; });
+    this.key_triggered_button("Wind Field 1", ["1"], () => { this.active_wind_fields.push(this.wind_fields[0]); });
+    this.key_triggered_button("Wind Field 2", ["2"], () => { this.active_wind_fields.push(this.wind_fields[1]); });
+    this.key_triggered_button("Wind Field 3", ["3"], () => { this.active_wind_fields.push(this.wind_fields[2]); });
+    this.key_triggered_button("No Wind", ["4"], () => { this.active_wind_fields = []; });
+    this.key_triggered_button("Detach Enable/Disable", ["5"], () => { this.dandelion1.detach_enabled = !this.dandelion1.detach_enabled });
   }
 }
-
-
-// export class DandelionTest extends DandelionTest_base {
-//   render_animation(caller) {                                                // display():  Called once per frame of animation.  For each shape that you want to
-//     super.render_animation(caller);
-
-//     const blue = color(0, 0, 1, 1), yellow = color(1, 0.7, 0, 1),
-//       wall_color = color(0.7, 1.0, 0.8, 1),
-//       blackboard_color = color(0.2, 0.2, 0.2, 1),
-//       pink = color(0.9, 0.7, 0.7, 1);
-
-//     const t = this.t = this.uniforms.animation_time / 1000;
-
-//     // !!! Draw ground
-//     let floor_transform = Mat4.translation(0, 0, 0).times(Mat4.scale(50, 0.01, 50));
-//     this.shapes.ground.draw(caller, this.uniforms, floor_transform, this.materials.soil);
-
-//     // draw sky sphere
-//     let sky_transform = Mat4.translation(0, 0, 0).times(Mat4.scale(50, 50, 50));
-//     this.shapes.sky.draw(caller, this.uniforms, sky_transform, this.materials.sky);
-
-//     // Draw dandelion
-//     //this.dandelion.draw(caller, this.uniforms, this.materials.plastic);
-
-//     // Draw detached seeds
-//     this.draw_detached_seeds(caller);
-
-//     // Visualize wind direction (optional)
-//     this.draw_wind_indicator(caller);
-
-//     // if (this.t_sim > 8) {
-//     //   console.log("no wind")
-//     //   this.wind_field = null
-//     // }
-//     // else if (this.t_sim < 2) {
-//     //   this.wind_field = this.wind_field_1
-//     //   let wind_transform = Mat4.translation(this.source_point_1[0], this.source_point_1[1], this.source_point_1[2]).times(Mat4.scale(0.3, 0.3, 0.3));
-//     //   this.shapes.ball.draw(caller, this.uniforms, wind_transform, { ...this.materials.plastic, color: yellow });
-//     // }
-//     // else if (this.t_sim < 4) {
-//     //   console.log("no wind")
-//     //   this.wind_field = null
-//     // }
-//     // else if (this.t_sim < 6) {
-//     //   this.wind_field = this.wind_field_2
-//     //   let wind_transform = Mat4.translation(this.source_point_2[0], this.source_point_2[1], this.source_point_2[2]).times(Mat4.scale(0.3, 0.3, 0.3));
-//     //   this.shapes.ball.draw(caller, this.uniforms, wind_transform, { ...this.materials.plastic, color: yellow });
-//     // }
-//     // else if (this.t_sim <= 8) {
-//     //   this.wind_field = this.wind_field_3
-//     //   let wind_transform = Mat4.translation(this.source_point_3[0], this.source_point_3[1], this.source_point_3[2]).times(Mat4.scale(0.3, 0.3, 0.3));
-//     //   this.shapes.ball.draw(caller, this.uniforms, wind_transform, { ...this.materials.plastic, color: yellow });
-//     // }
-
-//     let dt = Math.min(1 / 60, this.uniforms.animation_delta_time / 1000)
-//     let t_next = this.t_sim + dt;
-//     for (; this.t_sim <= t_next; this.t_sim += this.t_step) {
-//       this.dandelion1.update(this.t_step, this.windField);
-//       // this.dandelion2.update(this.t_step, this.wind_field);
-//       // this.dandelion3.update(this.t_step, this.wind_field);
-//     }
-//     this.dandelion1.draw(caller, this.uniforms, this.materials.plastic);
-//     // this.dandelion2.draw(caller, this.uniforms, this.materials.plastic);
-//     // this.dandelion3.draw(caller, this.uniforms, this.materials.plastic);
-//   }
-
-//   draw_detached_seeds(caller) {
-//     // Draw all detached seeds being carried by the wind
-//     for (const seed of this.windField.detached_seeds) {
-//       // Draw seed stalk
-//       const stalk_transform = Mat4.scale(0.05, 0.05, 0.15);
-//       stalk_transform.pre_multiply(Mat4.rotation(Math.PI / 2, 1, 0, 0));
-//       stalk_transform.pre_multiply(Mat4.translation(seed.pos[0], seed.pos[1], seed.pos[2]));
-//       this.shapes.cylinder.draw(caller, this.uniforms, stalk_transform, {
-//         ...this.materials.seed,
-//         color: color(0.8, 0.7, 0.6, 1)
-//       });
-
-//       // Draw seed fluff
-//       const fluff_transform = Mat4.scale(0.1, 0.1, 0.1);
-//       fluff_transform.pre_multiply(Mat4.translation(seed.pos[0], seed.pos[1] + 0.15, seed.pos[2]));
-//       this.shapes.sphere.draw(caller, this.uniforms, fluff_transform, {
-//         ...this.materials.seed,
-//         color: color(1, 1, 1, 0.8)
-//       });
-//     }
-//   }
-
-//   draw_wind_indicator(caller) {
-//     // Draw an arrow showing wind direction
-//     const indicator_pos = vec3(-8, 6, -8);
-//     const indicator_length = this.wind_strength * 0.5;
-
-//     const arrow_transform = Mat4.scale(0.1, 0.1, indicator_length);
-//     const direction = this.wind_direction;
-
-//     // Calculate rotation to align with wind direction
-//     const z_axis = vec3(0, 0, 1);
-//     const rotation_axis = z_axis.cross(direction).normalized();
-//     const angle = Math.acos(z_axis.dot(direction));
-
-//     arrow_transform.pre_multiply(Mat4.rotation(angle, rotation_axis[0], rotation_axis[1], rotation_axis[2]));
-//     arrow_transform.pre_multiply(Mat4.translation(indicator_pos[0], indicator_pos[1], indicator_pos[2]));
-
-//     // Draw the wind arrow
-//     this.shapes.cylinder.draw(caller, this.uniforms, arrow_transform, {
-//       ...this.materials.plastic,
-//       color: color(0.5, 0.7, 1, 0.8)
-//     });
-
-//     // Draw arrow head
-//     const head_transform = Mat4.scale(0.2, 0.2, 0.2);
-//     const tip_pos = indicator_pos.plus(direction.times(indicator_length));
-//     head_transform.pre_multiply(Mat4.translation(tip_pos[0], tip_pos[1], tip_pos[2]));
-//     this.shapes.sphere.draw(caller, this.uniforms, head_transform, {
-//       ...this.materials.plastic,
-//       color: color(0.5, 0.7, 1, 1)
-//     });
-//   }
-
-//   render_controls() {
-//     // Add any control UI elements here if needed
-//     return [
-//       ["Wind Strength", this.wind_strength],
-//       ["Seeds Detached", this.windField.detached_seeds.length]
-//     ];
-//   }
-// }
