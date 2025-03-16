@@ -32,6 +32,12 @@ export class DandelionTest extends Component {
     this.shapes.ground.arrays.texture_coord.forEach(v => { v[0] *= 15; v[1] *= 15; });
 
     this.dandelion1 = new Dandelion(vec3(0, 0, 0));
+    this.dandelion2 = new Dandelion(vec3(-5, 0, 0)); // Left
+    this.dandelion3 = new Dandelion(vec3(5, 0, 0));   // Right
+    this.dandelion4 = new Dandelion(vec3(0, 0, -5));  // Back
+    this.dandelion5 = new Dandelion(vec3(0, 0, 5));   // Front
+
+
     this.wind_fields = [
       new WindField(vec3(8, 12, 0), vec3(-1, -1.5, 0), 20),
       new WindField(vec3(3, 2, 5), vec3(-3, -2, -5), 50),
@@ -90,6 +96,10 @@ export class DandelionTest extends Component {
         this.active_wind_fields[i].update(dt);
 
       this.dandelion1.update(this.t_step, this.active_wind_fields);
+      // this.dandelion2.update(this.t_step, this.active_wind_fields);
+      // this.dandelion3.update(this.t_step, this.active_wind_fields);
+      // this.dandelion4.update(this.t_step, this.active_wind_fields);
+      // this.dandelion5.update(this.t_step, this.active_wind_fields);
     }
 
     // Visualize wind direction (optional)
@@ -100,6 +110,10 @@ export class DandelionTest extends Component {
       this.active_wind_fields.pop();
 
     this.dandelion1.draw(caller, this.uniforms, this.materials.plastic);
+    // this.dandelion2.draw(caller, this.uniforms, this.materials.plastic);
+    // this.dandelion3.draw(caller, this.uniforms, this.materials.plastic);
+    // this.dandelion4.draw(caller, this.uniforms, this.materials.plastic);
+    // this.dandelion5.draw(caller, this.uniforms, this.materials.plastic);
 
     const colors = [color(1, 0.7, 0, 1), color(0.7, 1, 1, 1), color(0, 1, 0, 1)];
     for (let i = 0; i < this.wind_fields.length; i++) {
