@@ -38,6 +38,11 @@ export class WindField {
         return wind_dir.times(force_magnitude);
     }
 
+    getWindDirection(position) {
+        // Optionally, modify direction based on position (e.g., turbulence)
+        return this.direction; // For now, return a constant wind direction
+    }
+
     // Main update function to be called from animation loop
     update(dt) {
         this.time += dt;

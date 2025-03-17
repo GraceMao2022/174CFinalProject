@@ -5,8 +5,10 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="8785a8ab-5184-493c-a494-f8cf446c513c" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/DetachedSeed.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/DandelionTest.js" beforeDir="false" afterPath="$PROJECT_DIR$/DandelionTest.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Dandelion.js" beforeDir="false" afterPath="$PROJECT_DIR$/Dandelion.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/WindField.js" beforeDir="false" afterPath="$PROJECT_DIR$/WindField.js" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
