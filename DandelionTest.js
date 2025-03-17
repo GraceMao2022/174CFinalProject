@@ -3,7 +3,7 @@ import { Dandelion } from './Dandelion.js';
 import { WindField } from './WindField.js';
 
 // Pull these names into this module's scope for convenience:
-const { vec3, vec4, color, Mat4, Shape, Material, Shader, Texture, Component } = tiny;
+const { vec, vec3, vec4, color, Mat4, Shape, Material, Shader, Texture, Component } = tiny;
 
 export class DandelionTest extends Component {
   init() {
@@ -50,7 +50,7 @@ export class DandelionTest extends Component {
     this.blow_timeout = null;
   }
 
-  render_animation(caller) {                                                // display():  Called once per frame of animation.  We'll isolate out
+  render_animation(caller) { // display():  Called once per frame of animation.  We'll isolate out
     if (!caller.controls) {
       this.animated_children.push(caller.controls = new defs.Movement_Controls({ uniforms: this.uniforms }));
       caller.controls.add_mouse_controls(caller.canvas);
@@ -58,9 +58,13 @@ export class DandelionTest extends Component {
       // Camera setup
       Shader.assign_camera(Mat4.look_at(vec3(5, 8, 15), vec3(0, 5, 0), vec3(0, 1, 0)), this.uniforms);
 
+      // Shader.assign_camera(Mat4.look_at(vec3(0, 0, 0), vec3(0, 5, 0), vec3(0, 0, 1)), this.uniforms);
+      this.camera_inverse = Mat4.look_at(vec3(5, 8, 15), vec3(0, 5, 0), vec3(0, 1, 0))
+
       // Add click listener to blow on dandelion
       this.add_blow_interaction(caller.canvas);
     }
+    // console.log(caller.controls)
     this.uniforms.projection_transform = Mat4.perspective(Math.PI / 4, caller.width / caller.height, 1, 100);
 
     const light_position = vec4(22, 33, 0, 1.0);
@@ -110,34 +114,42 @@ export class DandelionTest extends Component {
 
   add_blow_interaction(canvas) {
     // Add mouse/touch event listeners to blow on the dandelion
-    const blow_handler = (event) => {
+    const blow_handler = (event, pos) => {
       // Calculate blow direction based on canvas coordinates
-      const rect = canvas.getBoundingClientRect();
-      const x = event.clientX - rect.left - rect.width / 2;
-      const y = -(event.clientY - rect.top - rect.height / 2);
+      let pos_ndc_near = vec4(pos[0], pos[1], -1.0, 1.0);
+      let pos_ndc_far = vec4(pos[0], pos[1], 1.0, 1.0);
+      let center_ndc_near = vec4(0.0, 0.0, -1.0, 1.0);
+      let P = this.uniforms.projection_transform;
+      let V = this.uniforms.camera_inverse;
+      let pos_world_near = Mat4.inverse(P.times(V)).times(pos_ndc_near);
+      let pos_world_far = Mat4.inverse(P.times(V)).times(pos_ndc_far);
+      let center_world_near = Mat4.inverse(P.times(V)).times(center_ndc_near);
+      pos_world_near.scale_by(1 / pos_world_near[3]);
+      pos_world_far.scale_by(1 / pos_world_far[3]);
+      center_world_near.scale_by(1 / center_world_near[3]);
 
       // Create a blow direction from camera towards click position
-      const camera_pos = vec3(5, 8, 15);
-      const blow_target = vec3(x / 20, y / 20, 0);
+      const camera_pos = vec3(center_world_near[0], center_world_near[1], center_world_near[2]);
+      const blow_target = vec3(pos_world_far[0], pos_world_far[1], pos_world_far[2]);
       const blow_direction = blow_target.minus(camera_pos).normalized();
 
       // Apply user blow
-      this.user_blow(blow_direction, 500.0);
+      this.user_blow(camera_pos, blow_direction, 500.0);
     };
 
-    // Add event listeners
-    canvas.addEventListener('mousedown', blow_handler);
-    canvas.addEventListener('touchstart', (event) => {
+    const mouse_position = (e, rect = canvas.getBoundingClientRect()) =>
+      vec((e.clientX - (rect.left + rect.right) / 2) / ((rect.right - rect.left) / 2),
+        (e.clientY - (rect.bottom + rect.top) / 2) / ((rect.top - rect.bottom) / 2));
+
+    // Add event listener
+    canvas.addEventListener('mousedown', (event) => {
       event.preventDefault();
-      blow_handler(event.touches[0]);
+      blow_handler(event, mouse_position(event));
     });
   }
 
-  user_blow(direction, strength) {
-    // this.is_blowing = true;
-
-    // TODO: change source_point to match actual camera pos
-    this.user_wind_field = new WindField(vec3(5, 8, 15), direction, strength);
+  user_blow(source_point, direction, strength) {
+    this.user_wind_field = new WindField(source_point, direction, strength);
 
     // Reset any existing timeout
     if (this.blow_timeout) {
@@ -146,7 +158,6 @@ export class DandelionTest extends Component {
 
     // Schedule return to normal wind
     this.blow_timeout = setTimeout(() => {
-      // this.is_blowing = false;
       this.user_wind_field = null;
     }, 1000);
   }
