@@ -5,20 +5,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="8785a8ab-5184-493c-a494-f8cf446c513c" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/BabyDandelion.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/assets/Grass.obj" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/assets/Grass1.jpg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/assets/flower.obj" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/assets/full_dandelion.mtl" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/assets/full_dandelion.obj" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/assets/new_seed.mtl" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/assets/new_seed.obj" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Dandelion.js" beforeDir="false" afterPath="$PROJECT_DIR$/Dandelion.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/DandelionTest.js" beforeDir="false" afterPath="$PROJECT_DIR$/DandelionTest.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/DetachedSeed.js" beforeDir="false" afterPath="$PROJECT_DIR$/DetachedSeed.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/WindField.js" beforeDir="false" afterPath="$PROJECT_DIR$/WindField.js" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -43,7 +31,7 @@
     "Node.js.DandelionTest.js.executor": "Run",
     "Node.js.DetachedSeed.js.executor": "Run",
     "RunOnceActivity.ShowReadmeOnStart": "true",
-    "git-widget-placeholder": "Merging parsa-user-wind",
+    "git-widget-placeholder": "parsa-user-wind",
     "last_opened_file_path": "/Users/phaji/Documents/GitHub/174CFinalProject",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
