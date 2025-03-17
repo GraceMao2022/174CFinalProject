@@ -29,7 +29,7 @@ export class DandelionTest extends Component {
       rgb: { shader: new defs.Textured_Phong(), ambient: .5, texture: new Texture("assets/rgb.jpg") },
       soil: { shader: new defs.Textured_Phong(), color: color(0, 0, 0, 1), ambient: 0.5, diffusivity: .5, specularity: 0, texture: new Texture("assets/soil2.jpeg") },
       sky: { shader: new defs.Textured_Phong(), color: color(0, 0, 0, 1), ambient: 1, diffusivity: .5, specularity: .2, texture: new Texture("assets/sky.jpeg", "NPOT") },
-      grass: { shader: new defs.Textured_Phong(), color: color(0, 0, 0, 1), ambient: 0.5, diffusivity: .5, specularity: .2, texture: new Texture("assets/Grass1.jpg", "NPOT") },
+      grass: { shader: new defs.Textured_Phong(), color: color(0, 0, 0, 1), ambient: 0.65, diffusivity: .5, specularity: .5, texture: new Texture("assets/Grass1.jpg", "NPOT") },
     };
 
     this.shapes.ground.arrays.texture_coord.forEach(v => { v[0] *= 15; v[1] *= 15; });

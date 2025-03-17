@@ -98,36 +98,16 @@ export
                         seed.last_wind_force = null;
                     }
                     if (seed.detached) {
-                        this.createDetachedSeed(seed, i, wind_field);
+                        this.createDetachedSeed(seed);
                     }
                 }
                 this.seeds = this.seeds.filter(seed => !seed.detached);
                 this.seed_joints = this.seed_joints.filter((_, i) => !this.seeds[i]?.detached);
             }
 
-            createDetachedSeed(seed, index, wind_field) {
+            createDetachedSeed(seed) {
                 const start_pos = seed.get_global_position();
                 const start_tangent = seed.last_wind_force ? seed.last_wind_force.times(10) : vec3(0, 0, 0);
-
-                // Create end position based on wind direction and random factors
-                let end_direction;
-                if (wind_field) {
-                    // Use wind direction
-                    end_direction = wind_field.getWindDirection(start_pos).times(20 + Math.random() * 10);
-                } else {
-                    // Random direction with upward bias
-                    end_direction = vec3(
-                        (Math.random() * 2 - 1) * 10,
-                        5 + Math.random() * 10,
-                        (Math.random() * 2 - 1) * 10
-                    );
-                }
-
-                // End point is start + direction vector
-                const end_pos = start_pos.plus(end_direction);
-
-                // End tangent calculation - seed gradually slowing down
-                const end_tangent = end_direction.normalized().times(2);
 
                 // Create a detached seed with spline information
                 const detached_seed = new DetachedSeed(
@@ -135,9 +115,7 @@ export
                     seed.transform_matrix,
                     seed.color,
                     start_pos,
-                    end_pos,
-                    start_tangent,
-                    end_tangent
+                    start_tangent
                 );
 
                 this.detached_seeds.push(detached_seed);
