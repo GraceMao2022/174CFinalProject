@@ -16,13 +16,13 @@ const shapes = {
 
 const colors = {
     'green': color(0, 1, 0, 1),
-    'white': color(1, 1, 1, 1)
+    'white': color(1, 1, 1, 1),
 }
 
 export
     const Dandelion =
         class Dandelion {
-            constructor(ground_pos, detach_enabled = true) {
+            constructor(ground_pos, stem_length = 5, detach_enabled = true) {
                 this.detach_enabled = detach_enabled;
 
                 // leaf
@@ -32,7 +32,7 @@ export
                 };
                 // make random leaf rotation
                 const leaf_rotation = Math.random() * 2 * Math.PI;
-                this.leaf_transform = Mat4.translation(0, 1, 0).times(Mat4.rotation(leaf_rotation, 0, 1, 0)).times(Mat4.scale(2, 2, 2));
+                this.leaf_transform = Mat4.translation(ground_pos[0], ground_pos[1] + 1, ground_pos[2]).times(Mat4.rotation(leaf_rotation, 0, 1, 0)).times(Mat4.scale(2, 2, 2));
 
                 // root->stem
                 const root_location = Mat4.translation(ground_pos[0], ground_pos[1], ground_pos[2]);
@@ -40,8 +40,8 @@ export
                 this.root.set_dof(true, false, true, false, false, false);
 
                 // actual stem
-                this.num_stem_segments = 10;
-                this.stem_length = 5;
+                this.num_stem_segments = 7;
+                this.stem_length = stem_length;
                 this.stem_width = 0.15;
                 this.stem_segments = [];
                 this.stem_joints = []; //parent joint
@@ -59,9 +59,9 @@ export
 
                 this.init_num_seeds = 15;
                 this.seed_length = 1;
-                this.seed_display_length = 0.3; //need to tweak some things -- Grace
+                this.seed_display_length = 0.3;
                 this.seed_width = 0.5;
-                this.seed_mass = 0.005;
+                this.seed_mass = 0.0005;
                 this.seeds = [];
                 this.seed_joints = [];
                 this.detached_seeds = [];
@@ -73,35 +73,22 @@ export
                     this.applySeedForces(dt, null)
                 for (let i = 0; i < active_wind_fields.length; i++)
                     this.applySeedForces(dt, active_wind_fields[i]);
-                this.applyStemForces(dt);
+                this.applyStemForces(dt, active_wind_fields);
                 this.updateDetachedSeeds(dt);
             }
 
-            updateDetachedSeeds(dt) {
-                for (let i = this.detached_seeds.length - 1; i >= 0; i--) {
-                    const seed = this.detached_seeds[i];
-
-                    // Update seed position along the spline
-                    seed.updateSplinePosition(dt);
-
-                    // Remove seeds that have completed their journey or gone off-screen
-                    if (seed.spline_completed) {
-                        this.detached_seeds.splice(i, 1);
-                    }
-                }
-            }
-
             applySeedForces(dt, wind_field) {
-                // let detached_seeds = [];
-
                 for (let i = 0; i < this.seeds.length; i++) {
                     let seed = this.seeds[i];
                     seed.detach_enabled = this.detach_enabled;
 
                     if (wind_field !== null) {
                         let seed_end_effector_pos = seed.get_end_effector_global_position();
-                        let wind_force = wind_field.getWindForce(seed_end_effector_pos, 1);
+
+                        let wind_force = wind_field.getWindForce(seed_end_effector_pos, this.seed_width);
+
                         let radius_vector = seed_end_effector_pos.minus(this.seed_joints[i].get_global_position());
+
                         let torque = radius_vector.cross(wind_force);
                         seed.update(dt, torque);
                         seed.last_wind_force = wind_force;
@@ -111,13 +98,11 @@ export
                         seed.last_wind_force = null;
                     }
                     if (seed.detached) {
-                        console.log('hello')
                         this.createDetachedSeed(seed, i, wind_field);
                     }
                 }
                 this.seeds = this.seeds.filter(seed => !seed.detached);
                 this.seed_joints = this.seed_joints.filter((_, i) => !this.seeds[i]?.detached);
-
             }
 
             createDetachedSeed(seed, index, wind_field) {
@@ -156,23 +141,17 @@ export
                 );
 
                 this.detached_seeds.push(detached_seed);
-                console.log(`Created detached seed ${this.detached_seeds.length - 1} at position:`, start_pos);
-                console.log('Detached seeds count:', this.detached_seeds.length);
             }
 
             // Apply spring-damper forces to stem segments
-            applyStemForces(dt) {
+            applyStemForces(dt, active_wind_fields) {
                 let receptacle_pos = this.receptacle_node.get_global_position();
-                let cumulative_displ = vec3(0, 0, 0);
-                for (let i = 0; i < this.seeds.length; i++) {
-                    let seed_pos = this.seeds[i].get_end_effector_global_position();
-                    let displ = seed_pos.minus(receptacle_pos);
-                    cumulative_displ[0] += displ[0];
-                    cumulative_displ[1] += displ[1];
-                    cumulative_displ[2] += displ[2];
+
+                let total_receptacle_force = vec3(0, 0, 0);
+                for (let i = 0; i < active_wind_fields.length; i++) {
+                    let wind_force = active_wind_fields[i].getWindForce(receptacle_pos, this.receptacle_radius);
+                    total_receptacle_force.add_by(wind_force);
                 }
-                const total_seed_mass = this.seed_mass * this.seeds.length;
-                const grav_force = cumulative_displ.normalized().times(total_seed_mass * 9.8);
 
                 for (let i = 0; i < this.stem_segments.length; i++) {
                     // Get segment properties
@@ -182,13 +161,27 @@ export
                     // vector from segment position to ground attach point
                     const seg_displ_vec = seg_pos.minus(this.root.get_global_position());
 
-                    // if there are still seeds left
-                    if (total_seed_mass > 0) {
-                        const wind_torque = seg_displ_vec.cross(grav_force);
-                        segment.update(dt, wind_torque);
+                    // if there is wind
+                    if (active_wind_fields.length !== 0) {
+                        const receptacle_torque = seg_displ_vec.cross(total_receptacle_force);
+                        segment.update(dt, receptacle_torque);
                     }
                     else {
                         segment.update(dt, null);
+                    }
+                }
+            }
+
+            updateDetachedSeeds(dt) {
+                for (let i = this.detached_seeds.length - 1; i >= 0; i--) {
+                    const seed = this.detached_seeds[i];
+
+                    // Update seed position along the spline
+                    seed.updateSplinePosition(dt);
+
+                    // Remove seeds that have completed their journey or gone off-screen
+                    if (seed.spline_completed) {
+                        this.detached_seeds.splice(i, 1);
                     }
                 }
             }
@@ -229,7 +222,7 @@ export
                 const segment_len = this.stem_length / num_segments;
                 let parent_arc = this.root;
                 for (let i = 0; i < num_segments; i++) {
-                    const stem_transform = Mat4.scale(this.stem_width, segment_len, this.stem_width);
+                    const stem_transform = Mat4.scale(this.stem_width, segment_len / 2, this.stem_width);
                     stem_transform.pre_multiply(Mat4.translation(0, segment_len / 2, 0));
                     let stem_node = new Stem("stem", shapes.stem, stem_transform, colors.green);
                     this.stem_segments.push(stem_node);
@@ -345,7 +338,6 @@ class Arc {
         }
     }
 
-
     set_dof(rx, ry, rz, tx, ty, tz) {
         this.dof.Rx = rx;
         this.dof.Ry = ry;
@@ -421,8 +413,8 @@ class Seed extends Node {
         this.detached = false;
         this.detachment_threshold = 0.8;
 
-        this.ks = 20;
-        this.kd = 5;
+        this.ks = 10;
+        this.kd = 2;
 
         this.last_wind_force = null;
     }
@@ -511,8 +503,8 @@ class Stem extends Node {
         this.ang_vel = vec3(0, 0, 0);
         this.ext_torque = vec3(0, 0, 0);
 
-        this.ks = 20;
-        this.kd = 5;
+        this.ks = 30;
+        this.kd = 10;
 
     }
 

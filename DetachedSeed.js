@@ -34,9 +34,9 @@ export class DetachedSeed {
         const t3 = t2 * t;
 
         // Hermite basis functions
-        const h00 = 2*t3 - 3*t2 + 1;
-        const h10 = t3 - 2*t2 + t;
-        const h01 = -2*t3 + 3*t2;
+        const h00 = 2 * t3 - 3 * t2 + 1;
+        const h10 = t3 - 2 * t2 + t;
+        const h01 = -2 * t3 + 3 * t2;
         const h11 = t3 - t2;
 
         // Calculate current position using Hermite interpolation
