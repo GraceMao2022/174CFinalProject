@@ -1,5 +1,6 @@
 import { tiny, defs } from './examples/common.js';
 import { Shape_From_File } from './examples/obj-file-demo.js';
+import { DetachedSeed } from './DetachedSeed.js';
 
 // Pull these names into this module's scope for convenience:
 const { vec3, vec4, color, Mat4, Shape, Material, Shader, Texture, Component } = tiny;
@@ -64,6 +65,7 @@ export
                 this.seed_mass = 0.0005;
                 this.seeds = [];
                 this.seed_joints = [];
+                this.detached_seeds = [];
                 this.spawn_seeds(this.init_num_seeds);
             }
 
@@ -73,19 +75,20 @@ export
                 for (let i = 0; i < active_wind_fields.length; i++)
                     this.applySeedForces(dt, active_wind_fields[i]);
                 this.applyStemForces(dt, active_wind_fields);
+                this.updateDetachedSeeds(dt);
             }
 
             applySeedForces(dt, wind_field) {
-                let detached_seeds = [];
+                // let detached_seeds = [];
 
                 for (let i = 0; i < this.seeds.length; i++) {
                     let seed = this.seeds[i];
                     seed.detach_enabled = this.detach_enabled;
 
-                    if (seed.detached) {
-                        detached_seeds.push(seed);
-                        continue;
-                    }
+                    // if (seed.detached) {
+                    //     detached_seeds.push(seed);
+                    //     continue;
+                    // }
 
                     if (wind_field !== null) {
                         let seed_end_effector_pos = seed.get_end_effector_global_position();
@@ -96,13 +99,59 @@ export
 
                         let torque = radius_vector.cross(wind_force);
                         seed.update(dt, torque);
+                        seed.last_wind_force = wind_force;
                     }
-                    else
+                    else {
                         seed.update(dt, null);
+                        seed.last_wind_force = null;
+                    }
+                    if (seed.detached) {
+                        // console.log('hello')
+                        this.createDetachedSeed(seed, i, wind_field);
+                    }
                 }
-                if (detached_seeds.length > 0) {
-                    this.seeds = this.seeds.filter(seed => !seed.detached);
+                this.seeds = this.seeds.filter(seed => !seed.detached);
+                this.seed_joints = this.seed_joints.filter((_, i) => !this.seeds[i]?.detached);
+            }
+
+            createDetachedSeed(seed, index, wind_field) {
+                const start_pos = seed.get_global_position();
+                const start_tangent = seed.last_wind_force ? seed.last_wind_force.times(10) : vec3(0, 0, 0);
+
+                // Create end position based on wind direction and random factors
+                let end_direction;
+                if (wind_field) {
+                    // Use wind direction
+                    end_direction = wind_field.getWindDirection(start_pos).times(20 + Math.random() * 10);
+                } else {
+                    // Random direction with upward bias
+                    end_direction = vec3(
+                        (Math.random() * 2 - 1) * 10,
+                        5 + Math.random() * 10,
+                        (Math.random() * 2 - 1) * 10
+                    );
                 }
+
+                // End point is start + direction vector
+                const end_pos = start_pos.plus(end_direction);
+
+                // End tangent calculation - seed gradually slowing down
+                const end_tangent = end_direction.normalized().times(2);
+
+                // Create a detached seed with spline information
+                const detached_seed = new DetachedSeed(
+                    seed.shape,
+                    seed.transform_matrix,
+                    seed.color,
+                    start_pos,
+                    end_pos,
+                    start_tangent,
+                    end_tangent
+                );
+
+                this.detached_seeds.push(detached_seed);
+                // console.log(`Created detached seed ${this.detached_seeds.length - 1} at position:`, start_pos);
+                // console.log('Detached seeds count:', this.detached_seeds.length);
             }
 
             // Apply spring-damper forces to stem segments
@@ -152,11 +201,29 @@ export
                 }
             }
 
+            updateDetachedSeeds(dt) {
+                for (let i = this.detached_seeds.length - 1; i >= 0; i--) {
+                    const seed = this.detached_seeds[i];
+
+                    // Update seed position along the spline
+                    seed.updateSplinePosition(dt);
+
+                    // Remove seeds that have completed their journey or gone off-screen
+                    if (seed.spline_completed) {
+                        this.detached_seeds.splice(i, 1);
+                    }
+                }
+            }
+
             draw(webgl_manager, uniforms, material) {
                 shapes.leaf.draw(webgl_manager, uniforms, this.leaf_transform, this.leaf_texture);
 
                 this.matrix_stack = [];
                 this._rec_draw(this.root, Mat4.identity(), webgl_manager, uniforms, material);
+
+                for (const seed of this.detached_seeds) {
+                    seed.draw(webgl_manager, uniforms, material);
+                }
             }
 
             _rec_draw(arc, matrix, webgl_manager, uniforms, material) {
@@ -377,6 +444,8 @@ class Seed extends Node {
 
         this.ks = 10;
         this.kd = 2;
+
+        this.last_wind_force = null;
     }
 
     update(dt, wind_torque) {
