@@ -40,11 +40,12 @@ Challenges
 Team Contribution
 - Lauren Byun:
 - Parsa Hajipour:
-- Grace Mao: 
+- Grace Mao: Dandelion articulated model, seed rotation, stem bending, user-generated wind, model importing
 
 Credits:
 Assets
 - Dandelion leaf: https://www.turbosquid.com/3d-models/dandelion-plant-709989
+- Grass: https://free3d.com/3d-model/grass-74284.html 
 
 Code
 - Fibonacci sphere algorithm for spawning seeds evenly: https://stackoverflow.com/questions/9600801/evenly-distributing-n-points-on-a-sphere

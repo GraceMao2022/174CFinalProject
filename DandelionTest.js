@@ -1,6 +1,8 @@
 import { tiny, defs } from './examples/common.js';
 import { Dandelion } from './Dandelion.js';
+import { BabyDandelion } from './BabyDandelion.js';
 import { WindField, MovingWindField } from './WindField.js';
+import { Shape_From_File } from './examples/obj-file-demo.js';
 
 // Pull these names into this module's scope for convenience:
 const { vec, vec3, vec4, color, Mat4, Shape, Material, Shader, Texture, Component } = tiny;
@@ -18,8 +20,8 @@ export class DandelionTest extends Component {
       'sky': new defs.Subdivision_Sphere(4),
       'axis': new defs.Axis_Arrows(),
       'sphere': new defs.Subdivision_Sphere(5),
-      'cylinder': new defs.Cylindrical_Tube(20, 20, [[0, 0], [0, 0]])
-      // "seed": new Shape_From_File("./assets/leaf2.obj")
+      'cylinder': new defs.Cylindrical_Tube(20, 20, [[0, 0], [0, 0]]),
+      "grass": new Shape_From_File("./assets/Grass.obj")
     };
 
     this.materials = {
@@ -27,14 +29,33 @@ export class DandelionTest extends Component {
       rgb: { shader: new defs.Textured_Phong(), ambient: .5, texture: new Texture("assets/rgb.jpg") },
       soil: { shader: new defs.Textured_Phong(), color: color(0, 0, 0, 1), ambient: 0.5, diffusivity: .5, specularity: 0, texture: new Texture("assets/soil2.jpeg") },
       sky: { shader: new defs.Textured_Phong(), color: color(0, 0, 0, 1), ambient: 1, diffusivity: .5, specularity: .2, texture: new Texture("assets/sky.jpeg", "NPOT") },
+      grass: { shader: new defs.Textured_Phong(), color: color(0, 0, 0, 1), ambient: 0.5, diffusivity: .5, specularity: .2, texture: new Texture("assets/Grass1.jpg", "NPOT") },
     };
 
     this.shapes.ground.arrays.texture_coord.forEach(v => { v[0] *= 15; v[1] *= 15; });
 
-    this.dandelion1 = new Dandelion(vec3(0, 0, 0));
+    this.dandelions = [new Dandelion(vec3(0, 0, 0))
+    ];
+    this.baby_dandelions = [new BabyDandelion(vec3(4, 0, -4), 4.5)
+    ];
+
+    this.few_dandelions = [new Dandelion(vec3(0, 0, 0))
+    ];
+    this.few_baby_dandelions = [new BabyDandelion(vec3(4, 0, -4), 4.5)
+    ];
+
+    this.many_dandelions = [new Dandelion(vec3(0, 0, 0)),
+    new Dandelion(vec3(3, 0, 3), 6),
+    new Dandelion(vec3(-5, 0, 6), 4),
+    ];
+    this.many_baby_dandelions = [new BabyDandelion(vec3(4, 0, -4), 4.5),
+    new BabyDandelion(vec3(-4, 0, -4), 5.5),
+    new BabyDandelion(vec3(5, 0, -4), 6.5),
+    ];
+
     this.wind_fields = [
-      new WindField(vec3(8, 12, 0), vec3(-1, -1.5, 0), 100),
-      new WindField(vec3(3, 2, 5), vec3(-3, -2, -5), 50),
+      new WindField(vec3(2, 2, 2), vec3(-1, 1, -1), 40),
+      new WindField(vec3(-3, 2, -5), vec3(3, -2, 5), 50),
       new WindField(vec3(4, 5, 1), vec3(-1, -1, 0), 40),
     ];
 
@@ -46,7 +67,6 @@ export class DandelionTest extends Component {
     this.current_wind_field = this.wind_fields[0];
 
     // Setup interactive controls for wind
-    // this.is_blowing = false;
     this.blow_timeout = null;
 
     this.enable_wind_indicators = false;
@@ -66,7 +86,7 @@ export class DandelionTest extends Component {
       // Add click listener to blow on dandelion
       this.add_blow_interaction(caller.canvas);
     }
-    // console.log(caller.controls)
+
     this.uniforms.projection_transform = Mat4.perspective(Math.PI / 4, caller.width / caller.height, 1, 100);
 
     const light_position = vec4(22, 33, 0, 1.0);
@@ -85,6 +105,26 @@ export class DandelionTest extends Component {
     let sky_transform = Mat4.translation(0, 0, 0).times(Mat4.scale(50, 50, 50));
     this.shapes.sky.draw(caller, this.uniforms, sky_transform, this.materials.sky);
 
+    // draw grass 
+    let grass_transform = Mat4.translation(0, 0, 0).times(Mat4.scale(15, 15, 15));
+    this.shapes.grass.draw(caller, this.uniforms, grass_transform, this.materials.grass);
+    grass_transform = Mat4.translation(30, 0, 0).times(Mat4.scale(15, 15, 15));
+    this.shapes.grass.draw(caller, this.uniforms, grass_transform, this.materials.grass);
+    grass_transform = Mat4.translation(-30, 0, 0).times(Mat4.scale(15, 15, 15));
+    this.shapes.grass.draw(caller, this.uniforms, grass_transform, this.materials.grass);
+    grass_transform = Mat4.translation(0, 0, 30).times(Mat4.scale(15, 15, 15));
+    this.shapes.grass.draw(caller, this.uniforms, grass_transform, this.materials.grass);
+    grass_transform = Mat4.translation(0, 0, -30).times(Mat4.scale(15, 15, 15));
+    this.shapes.grass.draw(caller, this.uniforms, grass_transform, this.materials.grass);
+    grass_transform = Mat4.translation(30, 0, 30).times(Mat4.scale(15, 15, 15));
+    this.shapes.grass.draw(caller, this.uniforms, grass_transform, this.materials.grass);
+    grass_transform = Mat4.translation(-30, 0, 30).times(Mat4.scale(15, 15, 15));
+    this.shapes.grass.draw(caller, this.uniforms, grass_transform, this.materials.grass);
+    grass_transform = Mat4.translation(-30, 0, -30).times(Mat4.scale(15, 15, 15));
+    this.shapes.grass.draw(caller, this.uniforms, grass_transform, this.materials.grass);
+    grass_transform = Mat4.translation(30, 0, -30).times(Mat4.scale(15, 15, 15));
+    this.shapes.grass.draw(caller, this.uniforms, grass_transform, this.materials.grass);
+
     // add user wind to active wind
     if (this.user_wind_field !== null)
       this.active_wind_fields.push(this.user_wind_field);
@@ -95,7 +135,11 @@ export class DandelionTest extends Component {
       for (let i = 0; i < this.active_wind_fields.length; i++)
         this.active_wind_fields[i].update(dt);
 
-      this.dandelion1.update(this.t_step, this.active_wind_fields);
+      for (let i = 0; i < this.dandelions.length; i++)
+        this.dandelions[i].update(this.t_step, this.active_wind_fields);
+
+      for (let i = 0; i < this.baby_dandelions.length; i++)
+        this.baby_dandelions[i].update(this.t_step, this.active_wind_fields);
     }
 
     // Visualize wind directions
@@ -107,7 +151,11 @@ export class DandelionTest extends Component {
     if (this.user_wind_field !== null)
       this.active_wind_fields.pop();
 
-    this.dandelion1.draw(caller, this.uniforms, this.materials.plastic);
+    // draw dandelions
+    for (let i = 0; i < this.dandelions.length; i++)
+      this.dandelions[i].draw(caller, this.uniforms, this.materials.plastic);
+    for (let i = 0; i < this.baby_dandelions.length; i++)
+      this.baby_dandelions[i].draw(caller, this.uniforms, this.materials.plastic);
   }
 
   add_blow_interaction(canvas) {
@@ -132,7 +180,7 @@ export class DandelionTest extends Component {
       const blow_direction = blow_target.minus(camera_pos).normalized();
 
       // Apply user blow
-      this.user_blow(camera_pos, blow_direction, 50.0);
+      this.user_blow(camera_pos, blow_direction, 10.0);
     };
 
     const mouse_position = (e, rect = canvas.getBoundingClientRect()) =>
@@ -157,7 +205,7 @@ export class DandelionTest extends Component {
     // Schedule return to normal wind
     this.blow_timeout = setTimeout(() => {
       this.user_wind_field = null;
-    }, 5000);
+    }, 10000);
   }
 
   render_controls() {
@@ -165,7 +213,18 @@ export class DandelionTest extends Component {
     this.key_triggered_button("Wind Field 2", ["2"], () => { this.active_wind_fields.push(this.wind_fields[1]); });
     this.key_triggered_button("Wind Field 3", ["3"], () => { this.active_wind_fields.push(this.wind_fields[2]); });
     this.key_triggered_button("No Wind", ["4"], () => { this.active_wind_fields = []; });
-    this.key_triggered_button("Enable/Disable Seed Detachment", ["5"], () => { this.dandelion1.detach_enabled = !this.dandelion1.detach_enabled });
+    this.key_triggered_button("Enable/Disable Seed Detachment", ["5"], () => {
+      for (let i = 0; i < this.dandelions.length; i++)
+        this.dandelions[i].detach_enabled = !this.dandelions[i].detach_enabled
+    });
     this.key_triggered_button("Enable/Disable Wind Indicators", ["6"], () => { this.enable_wind_indicators = !this.enable_wind_indicators });
+    this.key_triggered_button("Many Flowers", ["7"], () => {
+      this.dandelions = this.many_dandelions;
+      this.baby_dandelions = this.many_baby_dandelions;
+    });
+    this.key_triggered_button("Few Flowers", ["8"], () => {
+      this.dandelions = this.few_dandelions;
+      this.baby_dandelions = this.few_baby_dandelions;
+    });
   }
 }
