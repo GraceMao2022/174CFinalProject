@@ -1,7 +1,12 @@
 import { tiny, defs } from './examples/common.js';
 
 // Pull these names into this module's scope for convenience:
-const { vec3 } = tiny;
+const { vec3, Mat4 } = tiny;
+
+const shapes = {
+    'sphere': new defs.Subdivision_Sphere(5),
+    'cylinder': new defs.Cylindrical_Tube(20, 20, [[0, 0], [0, 0]]),
+};
 
 export class WindField {
     constructor(source_point, direction, magnitude) {
@@ -41,5 +46,39 @@ export class WindField {
     // Main update function to be called from animation loop
     update(dt) {
         this.time += dt;
+    }
+
+    draw(caller, uniforms, material) {
+        const indicator_length = this.magnitude * 0.05;
+        const indicator_pos = this.source_point.minus(this.direction.times(indicator_length / 2));
+        const arrow_transform = Mat4.scale(0.1, 0.1, indicator_length);
+
+        // Calculate rotation to align with wind direction
+        const z_axis = vec3(0, 0, 1);
+        const rotation_axis = z_axis.cross(this.direction).normalized();
+        const angle = Math.acos(z_axis.dot(this.direction));
+
+        arrow_transform.pre_multiply(Mat4.rotation(angle, rotation_axis[0], rotation_axis[1], rotation_axis[2]));
+        arrow_transform.pre_multiply(Mat4.translation(indicator_pos[0], indicator_pos[1], indicator_pos[2]));
+
+        // Draw the wind arrow
+        shapes.cylinder.draw(caller, uniforms, arrow_transform, material);
+
+        // Draw arrow head
+        const head_transform = Mat4.scale(0.2, 0.2, 0.2);
+        head_transform.pre_multiply(Mat4.translation(this.source_point[0], this.source_point[1], this.source_point[2]));
+        shapes.sphere.draw(caller, uniforms, head_transform, material);
+    }
+}
+
+export class MovingWindField extends WindField {
+    constructor(source_point, direction, magnitude) {
+        super(source_point, direction, magnitude);
+    }
+
+    update(dt) {
+        this.time += dt;
+
+        this.source_point.add_by(this.direction.times(0.01));
     }
 }

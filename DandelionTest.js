@@ -1,6 +1,6 @@
 import { tiny, defs } from './examples/common.js';
 import { Dandelion } from './Dandelion.js';
-import { WindField } from './WindField.js';
+import { WindField, MovingWindField } from './WindField.js';
 
 // Pull these names into this module's scope for convenience:
 const { vec, vec3, vec4, color, Mat4, Shape, Material, Shader, Texture, Component } = tiny;
@@ -33,7 +33,7 @@ export class DandelionTest extends Component {
 
     this.dandelion1 = new Dandelion(vec3(0, 0, 0));
     this.wind_fields = [
-      new WindField(vec3(8, 12, 0), vec3(-1, -1.5, 0), 20),
+      new WindField(vec3(8, 12, 0), vec3(-1, -1.5, 0), 100),
       new WindField(vec3(3, 2, 5), vec3(-3, -2, -5), 50),
       new WindField(vec3(4, 5, 1), vec3(-1, -1, 0), 40),
     ];
@@ -48,6 +48,8 @@ export class DandelionTest extends Component {
     // Setup interactive controls for wind
     // this.is_blowing = false;
     this.blow_timeout = null;
+
+    this.enable_wind_indicators = false;
   }
 
   render_animation(caller) { // display():  Called once per frame of animation.  We'll isolate out
@@ -96,25 +98,21 @@ export class DandelionTest extends Component {
       this.dandelion1.update(this.t_step, this.active_wind_fields);
     }
 
-    // Visualize wind direction (optional)
-    this.draw_wind_indicator(caller);
+    // Visualize wind directions
+    if (this.enable_wind_indicators)
+      for (let i = 0; i < this.active_wind_fields.length; i++)
+        this.active_wind_fields[i].draw(caller, this.uniforms, { ...this.materials.plastic, color: color(1, 0.7, 0, 1) })
 
     // pop user wind off of active wind stack
     if (this.user_wind_field !== null)
       this.active_wind_fields.pop();
 
     this.dandelion1.draw(caller, this.uniforms, this.materials.plastic);
-
-    const colors = [color(1, 0.7, 0, 1), color(0.7, 1, 1, 1), color(0, 1, 0, 1)];
-    for (let i = 0; i < this.wind_fields.length; i++) {
-      const transform = Mat4.translation(...this.wind_fields[i].source_point).times(Mat4.scale(0.3, 0.3, 0.3));
-      this.shapes.ball.draw(caller, this.uniforms, transform, { ...this.materials.plastic, color: colors[i] });
-    }
   }
 
   add_blow_interaction(canvas) {
     // Add mouse/touch event listeners to blow on the dandelion
-    const blow_handler = (event, pos) => {
+    const blow_handler = (pos) => {
       // Calculate blow direction based on canvas coordinates
       let pos_ndc_near = vec4(pos[0], pos[1], -1.0, 1.0);
       let pos_ndc_far = vec4(pos[0], pos[1], 1.0, 1.0);
@@ -134,7 +132,7 @@ export class DandelionTest extends Component {
       const blow_direction = blow_target.minus(camera_pos).normalized();
 
       // Apply user blow
-      this.user_blow(camera_pos, blow_direction, 500.0);
+      this.user_blow(camera_pos, blow_direction, 50.0);
     };
 
     const mouse_position = (e, rect = canvas.getBoundingClientRect()) =>
@@ -144,12 +142,12 @@ export class DandelionTest extends Component {
     // Add event listener
     canvas.addEventListener('mousedown', (event) => {
       event.preventDefault();
-      blow_handler(event, mouse_position(event));
+      blow_handler(mouse_position(event));
     });
   }
 
   user_blow(source_point, direction, strength) {
-    this.user_wind_field = new WindField(source_point, direction, strength);
+    this.user_wind_field = new MovingWindField(source_point, direction, strength);
 
     // Reset any existing timeout
     if (this.blow_timeout) {
@@ -159,48 +157,7 @@ export class DandelionTest extends Component {
     // Schedule return to normal wind
     this.blow_timeout = setTimeout(() => {
       this.user_wind_field = null;
-    }, 1000);
-  }
-
-  draw_wind_indicator(caller) {
-    if (this.active_wind_fields.length > 0) {
-      // Draw an arrow showing wind direction
-      let accum_force = vec3(0, 0, 0);
-      for (let i = 0; i < this.active_wind_fields.length; i++) {
-        accum_force.add_by(this.active_wind_fields[i].direction.times(this.active_wind_fields[i].magnitude));
-      }
-      let direction = accum_force.normalized();
-      // console.log(direction)
-      // console.log(accum_force.norm())
-
-      const indicator_pos = vec3(-8, 6, -8);
-      const indicator_length = accum_force.norm() * 0.1;
-
-      const arrow_transform = Mat4.scale(0.1, 0.1, indicator_length);
-
-      // Calculate rotation to align with wind direction
-      const z_axis = vec3(0, 0, 1);
-      const rotation_axis = z_axis.cross(direction).normalized();
-      const angle = Math.acos(z_axis.dot(direction));
-
-      arrow_transform.pre_multiply(Mat4.rotation(angle, rotation_axis[0], rotation_axis[1], rotation_axis[2]));
-      arrow_transform.pre_multiply(Mat4.translation(indicator_pos[0], indicator_pos[1], indicator_pos[2]));
-
-      // Draw the wind arrow
-      this.shapes.cylinder.draw(caller, this.uniforms, arrow_transform, {
-        ...this.materials.plastic,
-        color: color(0.5, 0.7, 1, 0.8)
-      });
-
-      // Draw arrow head
-      const head_transform = Mat4.scale(0.2, 0.2, 0.2);
-      const tip_pos = indicator_pos.plus(direction.times(indicator_length));
-      head_transform.pre_multiply(Mat4.translation(tip_pos[0], tip_pos[1], tip_pos[2]));
-      this.shapes.sphere.draw(caller, this.uniforms, head_transform, {
-        ...this.materials.plastic,
-        color: color(0.5, 0.7, 1, 1)
-      });
-    }
+    }, 5000);
   }
 
   render_controls() {
@@ -208,6 +165,7 @@ export class DandelionTest extends Component {
     this.key_triggered_button("Wind Field 2", ["2"], () => { this.active_wind_fields.push(this.wind_fields[1]); });
     this.key_triggered_button("Wind Field 3", ["3"], () => { this.active_wind_fields.push(this.wind_fields[2]); });
     this.key_triggered_button("No Wind", ["4"], () => { this.active_wind_fields = []; });
-    this.key_triggered_button("Detach Enable/Disable", ["5"], () => { this.dandelion1.detach_enabled = !this.dandelion1.detach_enabled });
+    this.key_triggered_button("Enable/Disable Seed Detachment", ["5"], () => { this.dandelion1.detach_enabled = !this.dandelion1.detach_enabled });
+    this.key_triggered_button("Enable/Disable Wind Indicators", ["6"], () => { this.enable_wind_indicators = !this.enable_wind_indicators });
   }
 }
