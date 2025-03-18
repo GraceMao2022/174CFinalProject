@@ -1,6 +1,6 @@
 Overview
 
-Our project is a visually-aesthetic and intricately-animated dandelion field. It was created sing tinygraphics.js and Blender for the dandelion and baby dandelion models/
+Our project is a visually-aesthetic and intricately-animated dandelion field. It was created using tinygraphics.js and Blender for the dandelion and baby dandelion models.
 
 Components
 1. Dandelion seed and stem bending
@@ -36,7 +36,7 @@ This determines how the dandelion seeds rotate while attached to receptacle, and
 
 3. Articulated kinematics
 
-The stem is made of multiple joints to allow it to bend, and the dandelion seeds are attached via joints to receptacle to allow them to rotate
+The stem is made of multiple joints to allow it to bend, and the dandelion seeds are attached via joints to receptacle to allow them to rotate.
 
 4. Hermite splines
 
