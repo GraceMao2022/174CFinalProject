@@ -12,7 +12,13 @@ A dandelion is composed of multiple nodes and arcs to form one articulated kinem
 The stem bending is taken care of in a similar way to seed bending. The stem is divided into multiple stem segments, each attached to the previous segment via an arc. When a force is detected at the receptacle (flower pod at the top of flower), a torque is computed for each segment based on the wind force and their distance to the root of the flower (very bottom on the ground). Then, the joint angles for each stem segment were computed. A similar rotational mass-spring-damper system is used for each stem segment in order to bring them back to their original positions.
 
 ## 2. Dandelion detachment
+
+
+
 ## 3. Dandelion detached seed movement
+
+A dandelion consists of its components with seeds that are added to a detached seeds array. These detached seeds follow a Hermite spline from its intial position to a randomly selected end point in the general direction of the wind field. When it reaches an edge or boundary, these detached seeds disappear. 
+
 ## 4. Wind field
 
 The wind field is handled inside WindField.js.
@@ -64,7 +70,7 @@ This is done in the majority of DetachedSeed.js.
 - Another one of our initial challenges was that the seeds were detaching too fast when we were detecting based on wind force. The solution was to detach once the seeds got past a certain joint angle instead, which also was more realistic.
 
 # Team Contribution
-- Lauren Byun: 3D object models (white and yellow dandelion), detached seed model
+- Lauren Byun: 3D object models (dandelions), detached seed class
 - Parsa Hajipour:
 - Grace Mao: Dandelion articulated model, seed rotation, stem bending, user-generated wind, model importing
 
