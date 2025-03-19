@@ -81,5 +81,5 @@ Assets
 - Soil texture: https://stock.adobe.com/images/seamless-soil-texture-can-be-used-as-pattern-to-fill-background/148003870
 - Sky texture: https://devforum.roblox.com/t/how-to-make-default-sky-look-better/2094999
 
-## Code
+Code
 - Fibonacci sphere algorithm for spawning seeds evenly: https://stackoverflow.com/questions/9600801/evenly-distributing-n-points-on-a-sphere
