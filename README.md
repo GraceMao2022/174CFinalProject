@@ -15,6 +15,8 @@ The stem bending is taken care of in a similar way to seed bending. The stem is 
 3. Dandelion detached seed movement
 4. Wind field
 
+The wind field is handled inside WindField.js.
+
 _____ (how force is calculated based on position)
 
 There are two types of wind fields: a static and a moving one. The static wind field keeps its source point stationary, while a moving wind field will gradually move its source point in the wind's defined direction.
@@ -23,6 +25,8 @@ Multiple wind fields can exist at once and will cumulatively affect each seed/st
 
 5. User interaction
 
+User interaction is handled in DandelionTest.js in Lines 161-209.
+
 Whenever the user clicks on the screen, a moving wind force is created with its direction based on the vector from the center of the screen to where they clicked. This is done by using the camera_inverse and projection matrices to compute where the camera is in global coordinates, and using canvas.getBoundingClientRect() to calculate where the user clicked on the screen.
 
 Algorithms
@@ -30,18 +34,25 @@ Algorithms
 
 This determines how dandelion seeds and stem segments rotate back to original positions.
 
+This is handled in Dandelion.js, in Lines 447-466 for the seeds and 510-525 for the stem.
+
 2. Symplectic Euler integration
 
 This determines how the dandelion seeds rotate while attached to receptacle, and how stem segments bend.
+
+This is handled in Dandelion.js, in Lines 440-445 for the seeds and Lines 503-508 for the stem.
 
 3. Articulated kinematics
 
 The stem is made of multiple joints to allow it to bend, and the dandelion seeds are attached via joints to receptacle to allow them to rotate.
 
+The dandelion's articulated kinematics model is initalized in lines 25-69 in Dandelion.js, and Lines 199-251 for the seeds and stem segments specifically.
+
 4. Hermite splines
 
 This determines the path that dandelion seeds follow once they detach, with control point positions and locations based on the wind force that caused the seed to detach.
 
+This is done in the majority of DetachedSeed.js.
 
 Other features
 - Baby dandelions that have stem bending
