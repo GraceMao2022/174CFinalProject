@@ -11,9 +11,11 @@ A dandelion is composed of multiple nodes and arcs to form one articulated kinem
 
 The stem bending is taken care of in a similar way to seed bending. The stem is divided into multiple stem segments, each attached to the previous segment via an arc. When a force is detected at the receptacle (flower pod at the top of flower), a torque is computed for each segment based on the wind force and their distance to the root of the flower (very bottom on the ground). Then, the joint angles for each stem segment were computed. A similar rotational mass-spring-damper system is used for each stem segment in order to bring them back to their original positions.
 
-### 2. Dandelion Detachment
+### 2. Dandelion Detachment Detection
 
+Dandelion detachment detection is done in lines 413-425 in Dandelion.js.
 
+Dandelions are detached based on their joint angle change from their original positions. Once they are detected to have detached, they are removed from the list of seeds still attached to the flower and added to a new list of detached seeds that move based on hermite splines (more details below).
 
 ### 3. Dandelion Detached Seed Movement
 
@@ -25,7 +27,7 @@ A dandelion consists of its components with seeds that are added to a detached s
 
 The wind field is handled inside WindField.js.
 
-_____ (how force is calculated based on position)
+A function getWindForce() inside WindField.js returns a force based on the inputted position and radius of the affected object. This is force is calculated based on the distance the position is from the wind's source point with some variability and wind density and drag considerations.
 
 There are two types of wind fields: a static and a moving one. The static wind field keeps its source point stationary, while a moving wind field will gradually move its source point in the wind's defined direction.
 
@@ -73,7 +75,7 @@ This is done in the majority of DetachedSeed.js.
 
 ## Team Contribution
 - Lauren Byun: 3D object models (dandelions), detached seed class
-- Parsa Hajipour:
+- Parsa Hajipour: Wind field, detached seed detection and hermite spline movement
 - Grace Mao: Dandelion articulated model, seed rotation, stem bending, user-generated wind, model importing
 
 ## Credits:
