@@ -17,7 +17,9 @@ The stem bending is taken care of in a similar way to seed bending. The stem is 
 
 ### 3. Dandelion Detached Seed Movement
 
-A dandelion consists of its components with seeds that are added to a detached seeds array. These detached seeds follow a Hermite spline from its intial position to a randomly selected end point in the general direction of the wind field. When it reaches an edge or boundary, these detached seeds disappear. 
+Dandelion detached seed movement was handled in DetachedSeed.js.
+
+A dandelion consists of its components with seeds that are added to a detached seeds array. These detached seeds follow a Hermite spline from its initial position to two random control points and tangents randomly selected based on the general direction of the wind field. After they reach the end of their hermite splines, these detached seeds disappear. 
 
 ### 4. Wind Field
 
